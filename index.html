@@ -1219,4 +1219,16 @@ window.addEventListener('hashchange', function () {
   });
 })();
 </script>
-</body></html>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("/life-tracker/sw.js")
+      .then(function () {
+        console.log("LifeTracker PWA: Service Worker aktywny");
+      })
+      .catch(function (error) {
+        console.error("Błąd Service Workera:", error);
+      });
+  });
+}
+</script></body></html>
