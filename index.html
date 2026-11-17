@@ -1135,9 +1135,20 @@ window.addEventListener('hashchange', function () {
       const saved = window.LifeTrackerStore.read(key, null);
       if (Array.isArray(saved)) return saved;
     }
-    const old = readLegacy(legacyKey);
-    if (window.LifeTrackerStore) window.LifeTrackerStore.write(key, old);
-    return old;
+    // Migrujemy tylko wtedy, gdy stary klucz faktycznie istnieje.
+    // Nie zapisujemy pustych tablic przy każdym uruchomieniu, bo wywołuje
+    // to zdarzenie synchronizacji i może powodować pętlę odświeżania.
+    try {
+      const raw = localStorage.getItem(legacyKey);
+      if (raw !== null) {
+        const old = JSON.parse(raw);
+        if (Array.isArray(old)) {
+          if (window.LifeTrackerStore) window.LifeTrackerStore.write(key, old);
+          return old;
+        }
+      }
+    } catch (e) {}
+    return [];
   };
   const write = (key, legacyKey, value) => {
     // Zachowujemy kopię w starym kluczu jako zabezpieczenie migracji.
