@@ -514,6 +514,60 @@ body { background-color:#101412; color:#e7eee9; }
 .fit-detail-chart polyline { stroke:#c98570!important; }
 </style>
 
+
+<style id="lifetracker-habits-premium-final">
+/* HABITS — premium botanical dark theme; deliberately placed last to win the cascade */
+#panel-habits{--habit-bg:#111a16;--habit-card:#19251f;--habit-card-2:#1e2d25;--habit-line:#34483b;--habit-text:#edf5ee;--habit-muted:#a8b9ad;--habit-track:#293b30;}
+#panel-habits .wrap{color:var(--habit-text);}
+#panel-habits .top h1,#panel-habits h1,#panel-habits h2,#panel-habits h3{color:#e8f2e9!important;}
+#panel-habits .sum{background:linear-gradient(135deg,#1d3026 0%,#17231c 100%)!important;border:1px solid #3b5947!important;color:var(--habit-text);box-shadow:0 10px 28px rgba(0,0,0,.18),inset 0 1px rgba(255,255,255,.035)!important;}
+#panel-habits .sum .big{color:#8ed0a8!important;}
+#panel-habits .sumt{color:#e1eee4!important;font-weight:700;}
+#panel-habits .sums{color:#a8b9ad!important;}
+#panel-habits .habit{background:linear-gradient(145deg,#1d2b23 0%,#17221c 100%)!important;border:1px solid #354b3d!important;border-radius:18px!important;color:var(--habit-text)!important;box-shadow:0 9px 24px rgba(0,0,0,.17),inset 0 1px rgba(255,255,255,.035)!important;gap:13px!important;}
+#panel-habits .habit:hover{border-color:#62866e!important;box-shadow:0 14px 30px rgba(0,0,0,.24)!important;}
+#panel-habits .hh h3{color:#f0f6f0!important;font-weight:750!important;}
+#panel-habits .gc{color:#b5c7ba!important;}
+#panel-habits .mp{color:#a6d8b5!important;}
+#panel-habits .habit-tag{background:#26392d!important;border:1px solid #405b49!important;color:#c3d7c8!important;}
+#panel-habits .prog{padding:9px 11px;background:rgba(8,16,11,.27);border:1px solid #304538;border-radius:12px;gap:11px;}
+#panel-habits .count{color:#e8f3e9!important;}
+#panel-habits .count span{color:#91a99a!important;}
+#panel-habits .pct{color:#c4e5cc!important;font-weight:800;}
+#panel-habits .bar{height:12px!important;background:#293d31!important;border:1px solid #405a48!important;border-radius:99px!important;box-shadow:inset 0 2px 4px rgba(0,0,0,.24)!important;overflow:hidden;}
+#panel-habits .bar i{height:100%;border-radius:99px!important;box-shadow:0 0 10px rgba(117,190,139,.22);}
+#panel-habits .habit:nth-child(6n+1) .bar i{background:linear-gradient(90deg,#39845e,#8ac99a)!important;}
+#panel-habits .habit:nth-child(6n+2) .bar i{background:linear-gradient(90deg,#397c91,#83c0c0)!important;}
+#panel-habits .habit:nth-child(6n+3) .bar i{background:linear-gradient(90deg,#a7773e,#e0bd78)!important;}
+#panel-habits .habit:nth-child(6n+4) .bar i{background:linear-gradient(90deg,#7866a6,#b3a0d8)!important;}
+#panel-habits .habit:nth-child(6n+5) .bar i{background:linear-gradient(90deg,#a85f55,#df9b83)!important;}
+#panel-habits .habit:nth-child(6n) .bar i{background:linear-gradient(90deg,#477d70,#91c5a9)!important;}
+#panel-habits .day,#panel-habits .cc{background:#202e26!important;border:1px solid #3a5142!important;color:#e0ece2!important;}
+#panel-habits .day .dn{color:#a8baad!important;}
+#panel-habits .day .dd{color:#e7f1e8!important;}
+#panel-habits .day[aria-pressed="true"],#panel-habits .cc[aria-pressed="true"]{background:var(--hc)!important;border-color:var(--hc)!important;color:#102017!important;box-shadow:0 3px 10px rgba(0,0,0,.22)!important;}
+#panel-habits .day[aria-pressed="true"] .dn{color:#102017!important;}
+#panel-habits .day.today,#panel-habits .cc.today{box-shadow:0 0 0 2px #1b2a21,0 0 0 4px #8ac99a!important;}
+#panel-habits .meta,#panel-habits .sub2,#panel-habits .hint{color:#a9bbae!important;}
+#panel-habits .panel,#panel-habits .demo{background:linear-gradient(145deg,#1d2b23,#17221c)!important;border-color:#354b3d!important;color:#e8f2e9!important;}
+#panel-habits .ph,#panel-habits .fld label,#panel-habits .fs legend{color:#dce9df!important;}
+#panel-habits input[type="text"],#panel-habits input[type="date"],#panel-habits select{background:#111b15!important;border-color:#405848!important;color:#edf5ee!important;}
+#panel-habits .chip span{background:#24352a!important;border-color:#405848!important;color:#dce9df!important;}
+#panel-habits .chip input:checked+span{background:#75b88c!important;border-color:#75b88c!important;color:#102017!important;}
+#panel-habits .btn{background:#26382d!important;border-color:#48614f!important;color:#e7f1e8!important;}
+#panel-habits .btn.pri{background:linear-gradient(135deg,#78bd91,#a0d3a8)!important;border-color:#8ac99a!important;color:#102017!important;}
+#panel-habits .lnk{color:#9fd2ad!important;}
+#panel-habits .ctl .tabs{background:#19271f!important;border-color:#3b5142!important;}
+#panel-habits .ctl .tabs button{color:#b9cbbd!important;}
+#panel-habits .ctl .tabs button[aria-pressed="true"]{background:#78bd91!important;color:#102017!important;}
+#panel-habits .cal .crh span,#panel-habits .ym,#panel-habits .yp,#panel-habits .sc{color:#a9bcad!important;}
+#panel-habits .sc.met{background:#75b88c!important;color:#102017!important;}
+#panel-habits .yc{background:#2b4033!important;}
+#panel-habits .yc.on{background:var(--hc)!important;}
+#panel-habits .empty{color:#b9cbbd!important;}
+@media(max-width:700px){#panel-habits .prog{grid-template-columns:auto minmax(0,1fr) auto;padding:8px 9px;}}
+</style>
+
 </head><body>
 <title>Karta nawyków</title>
 <meta name="claude:viewport-fit-sides" content="cover">
