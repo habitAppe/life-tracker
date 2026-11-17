@@ -1556,6 +1556,11 @@ window.addEventListener('hashchange', function () {
     const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\n');
     const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download='budget-transactions.csv'; a.click(); URL.revokeObjectURL(a.href);
   });
+  // Udostępniamy bezpieczny interfejs FITNESS modułom zewnętrznym (np. Garmin).
+  window.LifeTrackerFitness = {
+    getWorkouts: () => workouts,
+    setWorkouts: (value) => { workouts = value; write('workouts','life-tracker-fitness-v1',workouts); renderFitness(); }
+  };
   renderFitness(); renderBudget();
   const initial=location.hash.replace('#','');
   if(['habits','fitness','budget'].includes(initial)) document.querySelector('[data-panel="'+initial+'"]').click();
@@ -1745,6 +1750,9 @@ window.addEventListener('hashchange', function () {
         // Aktywności piesze przechowujemy osobno w danych Garmina, bez wpisu w kalendarzu.
         const rootData = localData();
         const walkingData = Array.isArray(rootData.garminWalking) ? rootData.garminWalking : [];
+        const fitnessModule = window.LifeTrackerFitness;
+        if (!fitnessModule) throw new Error('Moduł FITNESS nie został prawidłowo uruchomiony. Odśwież aplikację.');
+        const workouts = fitnessModule.getWorkouts();
         const importedIds = new Set();
         workouts.forEach(w => { if (w.garminActivityId != null) importedIds.add(String(w.garminActivityId)); });
         walkingData.forEach(w => { if (w.activityId != null) importedIds.add(String(w.activityId)); });
@@ -1795,10 +1803,7 @@ window.addEventListener('hashchange', function () {
           displayLines.push('Dodano do FITNESS: ' + fitType + ' · ' + date);
         });
 
-        if (addedToCalendar) {
-          write('workouts', 'life-tracker-fitness-v1', workouts);
-          renderFitness();
-        }
+        if (addedToCalendar) fitnessModule.setWorkouts(workouts);
         rootData.workouts = workouts;
         rootData.garminWalking = walkingData;
         rootData.updatedAt = new Date().toISOString();
