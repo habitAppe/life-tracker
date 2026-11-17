@@ -54,6 +54,31 @@ body { background-color:#101412; color:#e7eee9; }
   .stats-grid .stat:last-child { grid-column:1/-1; }
 }
 
+
+.fit-calendar { margin-top:14px; }
+.fit-cal-head { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+.fit-cal-nav { display:flex; align-items:center; gap:8px; }
+.fit-cal-nav input { background:#101412; color:#e7eee9; border:1px solid #35413a; border-radius:9px; padding:8px; font:inherit; }
+.fit-cal-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:5px; }
+.fit-cal-weekday { text-align:center; color:#9aa8a0; font-size:11px; font-weight:700; padding:5px 0; }
+.fit-day { min-height:105px; min-width:0; background:#101412; border:1px solid #2b3430; border-radius:9px; padding:7px; cursor:pointer; text-align:left; color:#e7eee9; }
+.fit-day.outside { opacity:.38; }
+.fit-day.today { border-color:#4bc59b; }
+.fit-day.selected { outline:2px solid #4bc59b; outline-offset:-2px; }
+.fit-day-num { display:block; color:#9aa8a0; font-size:11px; margin-bottom:5px; }
+.fit-event { display:block; margin-top:4px; padding:3px 5px; border-radius:5px; font-size:10px; line-height:1.25; overflow-wrap:anywhere; color:#101412; font-weight:700; }
+.fit-event.strength { background:#70a5ff; }
+.fit-event.run { background:#4bc59b; }
+.fit-event.bike { background:#f0b14a; }
+.fit-event.other { background:#c69cff; }
+.fit-day-more { display:block; color:#9aa8a0; font-size:10px; margin-top:4px; }
+.fit-legend { display:flex; flex-wrap:wrap; gap:12px; margin-top:12px; color:#9aa8a0; font-size:11px; }
+.fit-legend span { display:inline-flex; align-items:center; gap:5px; }
+.fit-dot { width:9px; height:9px; border-radius:3px; display:inline-block; }
+.fit-month-stats { color:#9aa8a0; font-size:12px; }
+.fit-form-actions { display:flex; gap:8px; grid-column:1/-1; flex-wrap:wrap; }
+@media(max-width:600px) { .fit-cal-grid { gap:3px; } .fit-day { min-height:76px; padding:4px; border-radius:6px; } .fit-event { font-size:9px; padding:2px 3px; } .fit-day-num { font-size:10px; } }
+
 </style><link rel="manifest" href="/life-tracker/manifest.webmanifest"></head><body>
 <title>Karta nawyków</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -317,7 +342,7 @@ details.tbl .tw { overflow-x: auto; }
           <label>Dystans (km)<input id="fit-distance" type="number" min="0" step="0.01" placeholder="np. 8.5"></label>
           <label>Czas (min)<input id="fit-duration" type="number" min="0" step="1" placeholder="np. 45"></label>
           <label class="wide">Notatki<textarea id="fit-notes" rows="2" placeholder="Opcjonalne notatki…"></textarea></label>
-          <button class="action primary wide" type="submit">+ Zapisz trening</button>
+          <input id="fit-edit-id" type="hidden"><div class="fit-form-actions"><button id="fit-submit" class="action primary" type="submit">+ Zapisz trening</button><button id="fit-cancel-edit" class="action" type="button" hidden>Anuluj edycję</button></div>
         </form>
       </article>
       <article class="module-card">
@@ -330,6 +355,15 @@ details.tbl .tw { overflow-x: auto; }
         <p class="muted small">Na tym etapie wpisujesz aktywności ręcznie. Import z Garmina/Stravy możemy dodać później.</p>
       </article>
     </div>
+    <article class="module-card fit-calendar">
+      <div class="fit-cal-head">
+        <div><h2>Kalendarz aktywności</h2><p id="fit-month-stats" class="fit-month-stats">Wybierz dzień, aby dodać trening.</p></div>
+        <div class="fit-cal-nav"><button type="button" class="action" id="fit-prev-month" aria-label="Poprzedni miesiąc">‹</button><input id="fit-month" type="month" aria-label="Wybierz miesiąc"><button type="button" class="action" id="fit-next-month" aria-label="Następny miesiąc">›</button></div>
+      </div>
+      <div id="fit-calendar-grid" class="fit-cal-grid" aria-label="Kalendarz treningów"></div>
+      <div class="fit-legend"><span><i class="fit-dot" style="background:#70a5ff"></i>Siłowy</span><span><i class="fit-dot" style="background:#4bc59b"></i>Bieganie</span><span><i class="fit-dot" style="background:#f0b14a"></i>Rower</span><span><i class="fit-dot" style="background:#c69cff"></i>Inne</span></div>
+      <p class="muted small" style="margin-top:10px">Kliknij dzień, aby ustawić datę formularza. Kliknij trening w kalendarzu lub historii, aby go edytować.</p>
+    </article>
     <article class="module-card">
       <div class="section-title"><h2>Historia treningów</h2><span class="muted small">Najnowsze na górze</span></div>
       <div id="fitness-list" class="entry-list"><p class="muted">Nie dodano jeszcze treningów.</p></div>
@@ -1077,23 +1111,83 @@ window.addEventListener('hashchange', function () {
 
   function money(n){ return new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN'}).format(n); }
   function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function fitClass(type){
+    if(type==='Trening siłowy') return 'strength';
+    if(type==='Bieganie') return 'run';
+    if(type==='Rower') return 'bike';
+    return 'other';
+  }
+  function monthKey(date){ return String(date||'').slice(0,7); }
   function renderFitness(){
     $('fit-total').textContent = workouts.length;
     $('fit-km').textContent = workouts.filter(x=>x.type==='Bieganie').reduce((a,x)=>a+(+x.distance||0),0).toLocaleString('pl-PL',{maximumFractionDigits:2})+' km';
     const mins = workouts.reduce((a,x)=>a+(+x.duration||0),0);
     $('fit-time').textContent = (mins/60).toLocaleString('pl-PL',{maximumFractionDigits:1})+' h';
     $('fitness-list').innerHTML = workouts.length ? workouts.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(x=>`
-      <div class="entry"><div class="entry-main"><strong>${esc(x.name)}</strong><div class="entry-meta">${esc(x.date)} · ${esc(x.type)}${x.notes?' · '+esc(x.notes):''}</div></div><div class="entry-side"><strong>${x.distance?esc(x.distance)+' km':''}${x.duration?' · '+esc(x.duration)+' min':''}</strong><button data-fit-delete="${x.id}">Usuń</button></div></div>`).join('') : '<p class="muted">Nie dodano jeszcze treningów.</p>';
+      <div class="entry"><div class="entry-main"><strong>${esc(x.name)}</strong><div class="entry-meta">${esc(x.date)} · ${esc(x.type)}${x.notes?' · '+esc(x.notes):''}</div></div><div class="entry-side"><strong>${x.distance?esc(x.distance)+' km':''}${x.duration?' · '+esc(x.duration)+' min':''}</strong><button data-fit-edit="${x.id}">Edytuj</button> <button data-fit-delete="${x.id}">Usuń</button></div></div>`).join('') : '<p class="muted">Nie dodano jeszcze treningów.</p>';
+    renderFitnessCalendar();
+  }
+  function renderFitnessCalendar(){
+    const month=$('fit-month').value || today.slice(0,7);
+    const parts=month.split('-').map(Number), year=parts[0], mon=parts[1];
+    if(!year || !mon) return;
+    const first=new Date(year,mon-1,1), days=new Date(year,mon,0).getDate();
+    const offset=(first.getDay()+6)%7;
+    const prevDays=new Date(year,mon-1,0).getDate();
+    const labels=['Pn','Wt','Śr','Cz','Pt','Sb','Nd'];
+    const byDate={};
+    workouts.forEach(x=>{ if(!byDate[x.date]) byDate[x.date]=[]; byDate[x.date].push(x); });
+    let html=labels.map(x=>`<div class="fit-cal-weekday">${x}</div>`).join('');
+    const cells=Math.ceil((offset+days)/7)*7;
+    for(let i=0;i<cells;i++){
+      let day, date, outside=false;
+      if(i<offset){day=prevDays-offset+i+1;date=new Date(year,mon-2,day);outside=true;}
+      else if(i>=offset+days){day=i-offset-days+1;date=new Date(year,mon,day);outside=true;}
+      else {day=i-offset+1;date=new Date(year,mon-1,day);}
+      const key=date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0');
+      const entries=byDate[key]||[];
+      const todayClass=key===today?' today':'';
+      html+=`<button type="button" class="fit-day${outside?' outside':''}${todayClass}" data-fit-day="${key}"><span class="fit-day-num">${day}</span>${entries.slice(0,2).map(x=>`<span class="fit-event ${fitClass(x.type)}" data-fit-edit="${x.id}" title="${esc(x.name)}">${esc(x.name)}</span>`).join('')}${entries.length>2?`<span class="fit-day-more">+${entries.length-2} więcej</span>`:''}</button>`;
+    }
+    $('fit-calendar-grid').innerHTML=html;
+    const monthWorkouts=workouts.filter(x=>monthKey(x.date)===month);
+    const km=monthWorkouts.filter(x=>x.type==='Bieganie').reduce((a,x)=>a+(+x.distance||0),0);
+    const duration=monthWorkouts.reduce((a,x)=>a+(+x.duration||0),0);
+    $('fit-month-stats').textContent=`${monthWorkouts.length} treningów · ${km.toLocaleString('pl-PL',{maximumFractionDigits:2})} km biegania · ${(duration/60).toLocaleString('pl-PL',{maximumFractionDigits:1})} h aktywności`;
+  }
+  function resetFitnessForm(){
+    $('fitness-form').reset(); $('fit-date').value=today; $('fit-edit-id').value=''; $('fit-submit').textContent='+ Zapisz trening'; $('fit-cancel-edit').hidden=true;
+  }
+  function editFitness(id){
+    const x=workouts.find(w=>String(w.id)===String(id)); if(!x)return;
+    $('fit-edit-id').value=x.id; $('fit-date').value=x.date; $('fit-type').value=x.type; $('fit-name').value=x.name; $('fit-distance').value=x.distance||''; $('fit-duration').value=x.duration||''; $('fit-notes').value=x.notes||'';
+    $('fit-submit').textContent='Zapisz zmiany'; $('fit-cancel-edit').hidden=false;
+    $('fitness-form').scrollIntoView({behavior:'smooth',block:'center'});
   }
   $('fitness-form').addEventListener('submit',e=>{
     e.preventDefault();
-    workouts.push({id:Date.now(),date:$('fit-date').value,type:$('fit-type').value,name:$('fit-name').value.trim(),distance:$('fit-distance').value,duration:$('fit-duration').value,notes:$('fit-notes').value.trim()});
-    write('workouts','life-tracker-fitness-v1',workouts); e.target.reset(); $('fit-date').value=today; renderFitness();
+    const id=$('fit-edit-id').value;
+    const item={id:id||Date.now(),date:$('fit-date').value,type:$('fit-type').value,name:$('fit-name').value.trim(),distance:$('fit-distance').value,duration:$('fit-duration').value,notes:$('fit-notes').value.trim()};
+    if(id) workouts=workouts.map(x=>String(x.id)===String(id)?item:x); else workouts.push(item);
+    write('workouts','life-tracker-fitness-v1',workouts); resetFitnessForm(); renderFitness();
   });
+  $('fit-cancel-edit').addEventListener('click',resetFitnessForm);
   $('fitness-list').addEventListener('click',e=>{
+    const edit=e.target.closest('[data-fit-edit]'); if(edit){editFitness(edit.dataset.fitEdit);return;}
     const b=e.target.closest('[data-fit-delete]'); if(!b)return;
     workouts=workouts.filter(x=>String(x.id)!==b.dataset.fitDelete); write('workouts','life-tracker-fitness-v1',workouts); renderFitness();
   });
+  $('fit-calendar-grid').addEventListener('click',e=>{
+    const edit=e.target.closest('[data-fit-edit]'); if(edit){e.stopPropagation();editFitness(edit.dataset.fitEdit);return;}
+    const day=e.target.closest('[data-fit-day]'); if(!day)return;
+    $('fit-date').value=day.dataset.fitDay;
+    document.querySelectorAll('.fit-day.selected').forEach(x=>x.classList.remove('selected'));
+    day.classList.add('selected');
+  });
+  $('fit-month').value=today.slice(0,7);
+  $('fit-month').addEventListener('change',renderFitnessCalendar);
+  $('fit-prev-month').addEventListener('click',()=>{const d=new Date($('fit-month').value+'-01T12:00:00');d.setMonth(d.getMonth()-1);$('fit-month').value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');renderFitnessCalendar();});
+  $('fit-next-month').addEventListener('click',()=>{const d=new Date($('fit-month').value+'-01T12:00:00');d.setMonth(d.getMonth()+1);$('fit-month').value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');renderFitnessCalendar();});
 
   function renderBudget(){
     const month=$('bud-month').value;
