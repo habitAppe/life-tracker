@@ -952,7 +952,7 @@ details.tbl .tw { overflow-x: auto; }
       </article>
     </div>
     <article class="module-card">
-      <div class="section-title"><h2>Historia transakcji</h2><button id="bud-export" class="action">Eksport CSV</button></div>
+      <div class="section-title"><h2>Historia transakcji</h2><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="bud-import-btn" class="action primary" type="button">Importuj CSV</button><input id="bud-import-file" type="file" accept=".csv,text/csv" hidden><button id="bud-export" class="action">Eksport CSV</button></div></div><p class="muted small" id="bud-import-status" aria-live="polite">Importuj historię pobraną z banku. Przed zapisem zobaczysz podsumowanie.</p>
       <div id="budget-list" class="entry-list"><p class="muted">Nie dodano jeszcze transakcji.</p></div>
     </article>
   </div>
@@ -1948,6 +1948,55 @@ window.addEventListener('hashchange', function () {
     const del=e.target.closest('[data-debt-delete]'); if(del){debts=debts.filter(x=>String(x.id)!==del.dataset.debtDelete);write('debts','life-tracker-debts-v1',debts);renderBudget();return;}
     const edit=e.target.closest('[data-debt-edit]'); if(!edit)return; const x=debts.find(v=>String(v.id)===edit.dataset.debtEdit);if(!x)return;
     editingDebtId=x.id;$('debt-name').value=x.name;$('debt-original').value=x.original;$('debt-remaining').value=x.remaining;$('debt-monthly').value=x.monthly||'';$('debt-form-title').textContent='Edytuj zadłużenie';$('debt-submit').textContent='Zapisz zmiany';$('debt-cancel').hidden=false;$('debt-form').scrollIntoView({behavior:'smooth',block:'center'});
+  });
+  // Import historii bankowej CSV — bezpieczny podgląd, normalizacja i deduplikacja.
+  $('bud-import-btn').addEventListener('click',()=>$('bud-import-file').click());
+  function parseCSV(text, delimiter){
+    const rows=[]; let row=[], cell='', quoted=false;
+    for(let i=0;i<text.length;i++){
+      const c=text[i];
+      if(c==='"' && quoted && text[i+1]==='"'){cell+='"';i++;}
+      else if(c==='"') quoted=!quoted;
+      else if(c===delimiter && !quoted){row.push(cell);cell='';}
+      else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&text[i+1]==='\n')i++;row.push(cell);if(row.some(v=>v.trim()))rows.push(row);row=[];cell='';}
+      else cell+=c;
+    }
+    row.push(cell);if(row.some(v=>v.trim()))rows.push(row);return rows;
+  }
+  function normHead(v){return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ł/g,'l').trim();}
+  function parseMoney(v){let x=String(v||'').replace(/\s/g,'').replace(/(PLN|zl)/ig,'').replace(/[^0-9,.-]/g,'');if(x.includes(',')&&x.includes('.'))x=x.lastIndexOf(',')>x.lastIndexOf('.')?x.replace(/\./g,'').replace(',','.'):x.replace(/,/g,'');else x=x.replace(',','.');return Number(x);}
+  function parseBankDate(v){v=String(v||'').trim();let m=v.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);if(m)return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;m=v.match(/^(\d{1,2})[/.](\d{1,2})[/.](\d{4})/);if(m)return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;return '';}
+  function txFingerprint(x){return [x.date,x.type,Math.round((+x.amount||0)*100),String(x.name||'').toLowerCase().replace(/\s+/g,' ').trim()].join('|');}
+  $('bud-import-file').addEventListener('change',async e=>{
+    const file=e.target.files&&e.target.files[0];if(!file)return;
+    try{
+      let raw=await file.text();raw=raw.replace(/^\uFEFF/,'');
+      const first=raw.split(/\r?\n/)[0]||'';const delim=[';','\t',','].sort((a,b)=>first.split(b).length-first.split(a).length)[0];
+      const rows=parseCSV(raw,delim);if(rows.length<2)throw new Error('Plik nie zawiera wierszy transakcji.');
+      const headers=rows[0].map(normHead);
+      const find=(tests)=>headers.findIndex(h=>tests.some(t=>h===t||h.includes(t)));
+      let di=find(['data operacji','data ksiegowania','data transakcji','data']);
+      let ai=find(['kwota','amount','wartosc']);
+      let ni=find(['tytul','opis','nazwa','kontrahent','szczegoly']);
+      let ci=find(['kategoria']); let ti=find(['typ','rodzaj','operacja']);
+      if(di<0||ai<0){throw new Error('Nie rozpoznaję kolumn daty i kwoty. Sprawdź, czy to CSV z historią operacji mBanku.');}
+      const parsed=[];
+      rows.slice(1).forEach(r=>{
+        const date=parseBankDate(r[di]);const amountRaw=parseMoney(r[ai]);if(!date||!Number.isFinite(amountRaw)||amountRaw===0)return;
+        const description=(ni>=0?r[ni]:'')||'Transakcja z banku';
+        const typeText=ti>=0?normHead(r[ti]):'';
+        const isIncome=/uznanie|wplyw|przychod|income|wplata/.test(typeText)||amountRaw>0;
+        parsed.push({id:Date.now()+Math.random(),date,type:isIncome?'income':'expense',name:String(description).trim()||'Transakcja z banku',category:ci>=0&&r[ci].trim()?r[ci].trim():(isIncome?'Inne':'Inne'),amount:Math.abs(amountRaw)});
+      });
+      if(!parsed.length)throw new Error('Nie udało się odczytać żadnych transakcji.');
+      const seen=new Set(transactions.map(txFingerprint));const fresh=parsed.filter(x=>{const key=txFingerprint(x);if(seen.has(key))return false;seen.add(key);return true;});
+      const duplicates=parsed.length-fresh.length;
+      const summary=fresh.slice(0,5).map(x=>`${x.date} · ${x.type==='income'?'Przychód':'Wydatek'} · ${x.name} · ${money(x.amount)}`).join('\n');
+      const msg=`Plik: ${file.name}\nOdczytano: ${parsed.length}\nNowe transakcje: ${fresh.length}\nPominięte duplikaty: ${duplicates}\n\n${summary}${fresh.length>5?'\n…':''}\n\nDodać nowe transakcje?`;
+      if(fresh.length&&confirm(msg)){transactions=transactions.concat(fresh);write('transactions','life-tracker-budget-v1',transactions);renderBudget();$('bud-import-status').textContent=`Import zakończony: dodano ${fresh.length}, pominięto ${duplicates} duplikatów.`;}
+      else $('bud-import-status').textContent=`Podgląd: ${parsed.length} odczytanych, ${fresh.length} nowych, ${duplicates} duplikatów. Niczego nie dodano.`;
+    }catch(err){alert('Nie udało się zaimportować CSV: '+err.message);$('bud-import-status').textContent='Import nie powiódł się. Możesz spróbować ponownie.';}
+    e.target.value='';
   });
   $('bud-export').addEventListener('click',()=>{
     const rows=[['data','typ','nazwa','kategoria','kwota'],...transactions.map(x=>[x.date,x.type,x.name,x.category,x.amount])];
