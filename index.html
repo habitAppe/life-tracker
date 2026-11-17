@@ -1741,27 +1741,73 @@ window.addEventListener('hashchange', function () {
           ? data.activities
           : (data.activities && Array.isArray(data.activities.activities) ? data.activities.activities : []);
 
-        garminStatus.textContent = data.message || ('Połączenie działa. Pobrano ' + list.length + ' aktywności.');
-        if (list.length) {
-          const summary = list.map((a, i) => {
-            const name = a.activityName || a.name || a.activityType?.typeKey || 'Aktywność';
-            const date = a.startTimeLocal || a.startTimeGMT || a.startTime || '';
-            const distance = Number(a.distance) > 0
-              ? (Number(a.distance) / 1000).toLocaleString('pl-PL', { maximumFractionDigits: 2 }) + ' km'
-              : '';
-            const duration = Number(a.duration) > 0
-              ? (Number(a.duration) / 60).toLocaleString('pl-PL', { maximumFractionDigits: 1 }) + ' min'
-              : '';
-            const calories = Number(a.calories) > 0 ? a.calories + ' kcal' : '';
-            return (i + 1) + '. ' + name + (date ? ' · ' + date : '') +
-              ([distance, duration, calories].filter(Boolean).length ? '\n   ' + [distance, duration, calories].filter(Boolean).join(' · ') : '');
-          }).join('\n');
-          garminResults.textContent = summary;
-          garminResults.hidden = false;
-        } else {
-          garminResults.textContent = JSON.stringify(data.activities ?? data, null, 2);
-          garminResults.hidden = false;
+        // Automatyczny import: bieganie, trening siłowy i rower trafiają do FITNESS.
+        // Aktywności piesze przechowujemy osobno w danych Garmina, bez wpisu w kalendarzu.
+        const rootData = localData();
+        const walkingData = Array.isArray(rootData.garminWalking) ? rootData.garminWalking : [];
+        const importedIds = new Set();
+        workouts.forEach(w => { if (w.garminActivityId != null) importedIds.add(String(w.garminActivityId)); });
+        walkingData.forEach(w => { if (w.activityId != null) importedIds.add(String(w.activityId)); });
+        let addedToCalendar = 0, addedWalking = 0, skipped = 0;
+        const displayLines = [];
+
+        list.forEach((a) => {
+          const id = a.activityId ?? a.activityID ?? a.id;
+          const activityName = String(a.activityName || a.name || a.activityType?.typeKey || 'Aktywność');
+          const typeKey = String(a.activityType?.typeKey || a.activityType?.typeName || '').toLowerCase();
+          const label = (activityName + ' ' + typeKey).toLowerCase();
+          const dateRaw = a.startTimeLocal || a.startTimeGMT || a.startTime || '';
+          const date = dateRaw ? String(dateRaw).slice(0, 10) : '';
+          const distanceKm = Number(a.distance) > 0 ? Number(a.distance) / 1000 : '';
+          const durationMin = Number(a.duration) > 0 ? Number(a.duration) / 60 : '';
+          const calories = Number(a.calories) || 0;
+          const isWalk = /walking|hiking|walk|piesze|w[eę]dr[oó]wk|chodzenie/.test(label);
+          const isRun = /running|run|bieganie|bieg/.test(label);
+          const isBike = /cycling|biking|bike|rower|cycling/.test(label);
+          const isStrength = /strength|training|si[lł]a|si[lł]owy|weight.?training/.test(label);
+          const uniqueId = id != null ? String(id) : (activityName + '|' + dateRaw);
+          if (importedIds.has(uniqueId)) { skipped++; return; }
+          const common = { activityId: id ?? uniqueId, name: activityName, date, startTime: dateRaw, distanceKm, durationMin, calories, source: 'Garmin' };
+
+          if (isWalk) {
+            walkingData.push(common);
+            importedIds.add(uniqueId);
+            addedWalking++;
+            displayLines.push('Spacer: ' + activityName + ' · ' + date + ' · ' + (distanceKm ? distanceKm.toFixed(2) + ' km' : 'bez dystansu'));
+            return;
+          }
+
+          let fitType = '';
+          if (isRun) fitType = 'Bieganie';
+          else if (isBike) fitType = 'Rower';
+          else if (isStrength) fitType = 'Trening siłowy';
+          if (!fitType || !date) return;
+
+          workouts.push({
+            id: 'garmin-' + uniqueId, garminActivityId: id ?? uniqueId,
+            date, type: fitType, name: activityName,
+            calendarDetail: '', distance: distanceKm === '' ? '' : String(Number(distanceKm.toFixed(2))),
+            duration: durationMin === '' ? '' : String(Number(durationMin.toFixed(1))),
+            calories, notes: 'Import Garmin'
+          });
+          importedIds.add(uniqueId);
+          addedToCalendar++;
+          displayLines.push('Dodano do FITNESS: ' + fitType + ' · ' + date);
+        });
+
+        if (addedToCalendar) {
+          write('workouts', 'life-tracker-fitness-v1', workouts);
+          renderFitness();
         }
+        rootData.workouts = workouts;
+        rootData.garminWalking = walkingData;
+        rootData.updatedAt = new Date().toISOString();
+        localStorage.setItem(STORE_KEY, JSON.stringify(rootData));
+        scheduleUpload();
+
+        garminStatus.textContent = 'Synchronizacja zakończona. Nowe wpisy w FITNESS: ' + addedToCalendar + '. Spacery zapisane osobno: ' + addedWalking + '. Pominięte duplikaty: ' + skipped + '.';
+        garminResults.textContent = displayLines.length ? displayLines.join('\n') : 'Brak nowych aktywności do dodania.';
+        garminResults.hidden = false;
       } catch (err) {
         garminStatus.textContent = 'Błąd: ' + (err && err.message ? err.message : String(err));
       } finally {
