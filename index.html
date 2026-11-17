@@ -2002,6 +2002,7 @@ window.addEventListener('hashchange', function () {
       if (data && Array.isArray(data.workouts)) localStorage.setItem('life-tracker-fitness-v1', JSON.stringify(data.workouts));
       if (data && Array.isArray(data.transactions)) localStorage.setItem('life-tracker-budget-v1', JSON.stringify(data.transactions));
       if (data && Array.isArray(data.savingsGoals)) localStorage.setItem('life-tracker-savings-v1', JSON.stringify(data.savingsGoals));
+      if (data && Array.isArray(data.savingsPools)) localStorage.setItem('life-tracker-savings-pools-v1', JSON.stringify(data.savingsPools));
       if (data && Array.isArray(data.debts)) localStorage.setItem('life-tracker-debts-v1', JSON.stringify(data.debts));
     } finally { applyingRemote = false; }
   }
@@ -2028,13 +2029,29 @@ window.addEventListener('hashchange', function () {
     const { data: row, error } = await client.from('life_tracker_data').select('data, updated_at').eq('user_id', currentUser.id).maybeSingle();
     if (error) throw error;
     if (row && row.data && Object.keys(row.data).length) {
-      // Przy pierwszym podłączeniu istniejące dane w chmurze są źródłem prawdy.
+      // Chmura pozostaje źródłem prawdy, ale zachowujemy lokalną migrację wspólnych
+      // pul, jeśli starszy zapis w chmurze nie zna jeszcze pola savingsPools.
       const current = localData();
-      const remoteText = JSON.stringify(row.data);
+      const merged = { ...row.data };
+      const remoteHasPools = Array.isArray(merged.savingsPools) && merged.savingsPools.length > 0;
+      const localHasPools = Array.isArray(current.savingsPools) && current.savingsPools.length > 0;
+      if (!remoteHasPools && localHasPools) {
+        merged.savingsPools = current.savingsPools;
+        if (Array.isArray(current.savingsGoals)) merged.savingsGoals = current.savingsGoals;
+      }
+      const remoteText = JSON.stringify(merged);
       const localText = JSON.stringify(current);
       if (remoteText !== localText) {
-        saveLocal(row.data);
-        status('Pobrano dane z chmury. Odświeżam aplikację…', '#4bc59b');
+        saveLocal(merged);
+        // Zapisujemy tę samą, scaloną wersję do chmury PRZED odświeżeniem.
+        // Dzięki temu migracja nie uruchamia ponownie różnicy lokalne/chmura.
+        const { error: mergeError } = await client.from('life_tracker_data').upsert({
+          user_id: currentUser.id,
+          data: merged,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id' });
+        if (mergeError) throw mergeError;
+        status('Dane zsynchronizowane. Odświeżam aplikację…', '#4bc59b');
         setTimeout(() => location.reload(), 500);
       } else {
         status('Połączono z chmurą · dane są aktualne.', '#4bc59b');
