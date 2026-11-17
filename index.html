@@ -937,6 +937,18 @@ details.tbl .tw { overflow-x: auto; }
     </div>
     <div class="module-grid budget-goal-grid">
       <article class="module-card">
+        <div class="section-title"><h2>Cele oszczędnościowe</h2><span id="sav-total" class="muted small"></span></div>
+        <div id="savings-list" class="goal-list"><p class="muted">Nie dodano jeszcze celów.</p></div>
+        <button id="show-savings-form" class="action primary wide" type="button" aria-expanded="false" aria-controls="savings-form-card">+ Dodaj cel oszczędnościowy</button>
+      </article>
+      <article class="module-card">
+        <div class="section-title"><h2>Spłata zadłużeń</h2><span id="debt-total" class="muted small"></span></div>
+        <div id="debts-list" class="goal-list"><p class="muted">Nie dodano jeszcze zadłużeń.</p></div>
+        <button id="show-debt-form" class="action primary wide" type="button" aria-expanded="false" aria-controls="debt-form-card">+ Dodaj zadłużenie</button>
+      </article>
+    </div>
+    <div class="module-grid budget-goal-grid">
+      <article class="module-card" id="savings-form-card" hidden>
         <h2 id="savings-form-title">Dodaj cel oszczędnościowy</h2>
         <form id="savings-form" class="form-grid">
           <label class="wide">Nazwa celu<input id="sav-name" type="text" placeholder="np. Poduszka na 3 miesiące" required></label>
@@ -948,7 +960,7 @@ details.tbl .tw { overflow-x: auto; }
           <div class="fit-form-actions"><button id="sav-submit" class="action primary" type="submit">+ Dodaj cel</button><button id="sav-cancel" class="action" type="button" hidden>Anuluj</button></div>
         </form>
       </article>
-      <article class="module-card">
+      <article class="module-card" id="debt-form-card" hidden>
         <h2 id="debt-form-title">Dodaj zadłużenie</h2>
         <form id="debt-form" class="form-grid">
           <label class="wide">Nazwa zadłużenia<input id="debt-name" type="text" placeholder="np. Kredyt, rata za sprzęt" required></label>
@@ -957,16 +969,6 @@ details.tbl .tw { overflow-x: auto; }
           <label class="wide">Minimalna spłata miesięczna (zł)<input id="debt-monthly" type="number" min="0.01" step="0.01" placeholder="np. 500" required></label>
           <div class="fit-form-actions"><button id="debt-submit" class="action primary" type="submit">+ Dodaj zadłużenie</button><button id="debt-cancel" class="action" type="button" hidden>Anuluj</button></div>
         </form>
-      </article>
-    </div>
-    <div class="module-grid budget-goal-grid">
-      <article class="module-card">
-        <div class="section-title"><h2>Cele oszczędnościowe</h2><span id="sav-total" class="muted small"></span></div>
-        <div id="savings-list" class="goal-list"><p class="muted">Nie dodano jeszcze celów.</p></div>
-      </article>
-      <article class="module-card">
-        <div class="section-title"><h2>Spłata zadłużeń</h2><span id="debt-total" class="muted small"></span></div>
-        <div id="debts-list" class="goal-list"><p class="muted">Nie dodano jeszcze zadłużeń.</p></div>
       </article>
     </div>
     <article class="module-card">
@@ -1998,8 +2000,10 @@ window.addEventListener('hashchange', function () {
     $('debt-total').textContent=debts.length?`Pozostało: ${money(remaining)}`:'';
     $('debts-list').innerHTML=debts.length?debts.map(x=>{const paid=Math.max(0,(+x.original||0)-(+x.remaining||0));const pct=x.original>0?Math.min(100,Math.max(0,(paid/x.original)*100)):0;const monthly=+(x.monthly||x.minimumMonthly||0);const months=monthly>0?Math.ceil((+x.remaining||0)/monthly):0;let payoff='Ustaw minimalną spłatę, aby obliczyć datę.';if((+x.remaining||0)<=0)payoff='Spłacone';else if(months>0){const d=new Date();d.setHours(12,0,0,0);d.setMonth(d.getMonth()+months);payoff='Przewidywana spłata: '+d.toLocaleDateString('pl-PL',{month:'long',year:'numeric'});}const history=Array.isArray(x.payments)?x.payments.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))):[];return `<div class="goal-card"><div class="goal-card-head"><strong>${esc(x.name)}</strong><span class="goal-amount">${pct.toFixed(0)}% spłacono</span></div><div class="goal-track debt"><i style="width:${pct}%"></i></div><div class="goal-foot"><span>Pozostało: ${money(+x.remaining||0)} z ${money(+x.original||0)}</span><span>Min. ${money(monthly)}/mies.</span></div><p class="small muted" style="margin:8px 0 4px">${payoff}${months>0?' · około '+months+' mies.':''}</p><div class="pool-actions"><button data-debt-pay="${x.id}">+ Dodaj spłatę</button></div>${history.length?`<details class="small" style="margin-top:8px"><summary>Historia spłat (${history.length})</summary><div class="entry-list" style="margin-top:8px">${history.map(h=>`<div class="entry"><div class="entry-main"><strong>${money(+h.amount||0)}</strong><div class="entry-meta">${esc(h.date||'')}</div></div></div>`).join('')}</div></details>`:''}<div class="goal-actions"><button data-debt-edit="${x.id}">Edytuj</button><button data-debt-delete="${x.id}">Usuń</button></div></div>`}).join(''):'<p class="muted">Nie dodano jeszcze zadłużeń.</p>';
   }
-  function resetSavingsForm(){ $('savings-form').reset(); $('sav-current-cash').value='0'; $('sav-current-account').value='0'; $('sav-current-cash').disabled=false; $('sav-current-account').disabled=false; editingSavingsId=''; $('savings-form-title').textContent='Dodaj cel oszczędnościowy'; $('sav-submit').textContent='+ Dodaj cel'; $('sav-cancel').hidden=true; }
-  function resetDebtForm(){ $('debt-form').reset(); editingDebtId=''; $('debt-form-title').textContent='Dodaj zadłużenie'; $('debt-submit').textContent='+ Dodaj zadłużenie'; $('debt-cancel').hidden=true; }
+  function resetSavingsForm(){ $('savings-form-card').hidden=true; $('show-savings-form').hidden=false; $('show-savings-form').textContent='+ Dodaj cel oszczędnościowy'; $('show-savings-form').setAttribute('aria-expanded','false'); $('savings-form').reset(); $('sav-current-cash').value='0'; $('sav-current-account').value='0'; $('sav-current-cash').disabled=false; $('sav-current-account').disabled=false; editingSavingsId=''; $('savings-form-title').textContent='Dodaj cel oszczędnościowy'; $('sav-submit').textContent='+ Dodaj cel'; $('sav-cancel').hidden=true; }
+  function resetDebtForm(){ $('debt-form-card').hidden=true; $('show-debt-form').hidden=false; $('show-debt-form').textContent='+ Dodaj zadłużenie'; $('show-debt-form').setAttribute('aria-expanded','false'); $('debt-form').reset(); editingDebtId=''; $('debt-form-title').textContent='Dodaj zadłużenie'; $('debt-submit').textContent='+ Dodaj zadłużenie'; $('debt-cancel').hidden=true; }
+  $('show-savings-form').addEventListener('click',()=>{ $('savings-form-card').hidden=false; $('show-savings-form').hidden=true; $('show-savings-form').setAttribute('aria-expanded','true'); $('savings-form').scrollIntoView({behavior:'smooth',block:'center'}); $('sav-name').focus({preventScroll:true}); });
+  $('show-debt-form').addEventListener('click',()=>{ $('debt-form-card').hidden=false; $('show-debt-form').hidden=true; $('show-debt-form').setAttribute('aria-expanded','true'); $('debt-form').scrollIntoView({behavior:'smooth',block:'center'}); $('debt-name').focus({preventScroll:true}); });
   $('budget-form').addEventListener('submit',e=>{
     e.preventDefault(); transactions.push({id:Date.now(),date:$('bud-date').value,type:$('bud-type').value,name:$('bud-name').value.trim(),category:$('bud-category').value,amount:+$('bud-amount').value,balanceEffect:$('bud-date').value>String(budgetSettings.openingDate||today)||Date.now()>Number(budgetSettings.updatedAt||0)});
     write('transactions','life-tracker-budget-v1',transactions); e.target.reset(); $('bud-date').value=today; renderBudget();
@@ -2028,7 +2032,7 @@ window.addEventListener('hashchange', function () {
   $('savings-list').addEventListener('click',e=>{
     const del=e.target.closest('[data-sav-delete]'); if(del){savingsGoals=savingsGoals.filter(x=>String(x.id)!==del.dataset.savDelete);saveSavings();renderBudget();return;}
     const edit=e.target.closest('[data-sav-edit]'); if(!edit)return; const x=savingsGoals.find(v=>String(v.id)===edit.dataset.savEdit);if(!x)return;
-    editingSavingsId=x.id;$('sav-name').value=x.name;$('sav-category').value=x.category||x.name;$('sav-target').value=x.target;$('sav-current-cash').value='0';$('sav-current-account').value='0';$('sav-current-cash').disabled=true;$('sav-current-account').disabled=true;$('sav-monthly').value=x.monthly||'';$('savings-form-title').textContent='Edytuj cel oszczędnościowy';$('sav-submit').textContent='Zapisz zmiany';$('sav-cancel').hidden=false;$('savings-form').scrollIntoView({behavior:'smooth',block:'center'});
+    editingSavingsId=x.id;$('savings-form-card').hidden=false;$('show-savings-form').hidden=true;$('show-savings-form').setAttribute('aria-expanded','true');$('sav-name').value=x.name;$('sav-category').value=x.category||x.name;$('sav-target').value=x.target;$('sav-current-cash').value='0';$('sav-current-account').value='0';$('sav-current-cash').disabled=true;$('sav-current-account').disabled=true;$('sav-monthly').value=x.monthly||'';$('savings-form-title').textContent='Edytuj cel oszczędnościowy';$('sav-submit').textContent='Zapisz zmiany';$('sav-cancel').hidden=false;$('savings-form').scrollIntoView({behavior:'smooth',block:'center'});
   });
   $('savings-list').addEventListener('click',e=>{
     const button=e.target.closest('[data-pool-add-cash],[data-pool-add-account],[data-pool-take-cash],[data-pool-take-account]'); if(!button)return;
@@ -2049,7 +2053,7 @@ window.addEventListener('hashchange', function () {
     const del=e.target.closest('[data-debt-delete]'); if(del){if(!confirm('Usunąć to zadłużenie wraz z historią spłat?'))return;debts=debts.filter(x=>String(x.id)!==del.dataset.debtDelete);write('debts','life-tracker-debts-v1',debts);renderBudget();return;}
     const pay=e.target.closest('[data-debt-pay]'); if(pay){const x=debts.find(v=>String(v.id)===pay.dataset.debtPay);if(!x)return;const raw=prompt('Dodaj spłatę zadłużenia „'+x.name+'” — wpisz wpłaconą kwotę w zł:');if(raw===null)return;const amount=Math.round(Number(String(raw).replace(',','.'))*100)/100;if(!Number.isFinite(amount)||amount<=0){alert('Wpisz prawidłową kwotę większą od zera.');return;}if(amount>(+x.remaining||0)){alert('Spłata nie może być większa niż pozostałe zadłużenie ('+money(+x.remaining||0)+').');return;}x.remaining=Math.round(((+x.remaining||0)-amount)*100)/100;x.payments=Array.isArray(x.payments)?x.payments:[];x.payments.push({id:Date.now(),date:today,amount});write('debts','life-tracker-debts-v1',debts);renderBudget();return;}
     const edit=e.target.closest('[data-debt-edit]'); if(!edit)return; const x=debts.find(v=>String(v.id)===edit.dataset.debtEdit);if(!x)return;
-    editingDebtId=x.id;$('debt-name').value=x.name;$('debt-original').value=x.original;$('debt-remaining').value=x.remaining;$('debt-monthly').value=x.monthly||x.minimumMonthly||'';$('debt-form-title').textContent='Edytuj zadłużenie';$('debt-submit').textContent='Zapisz zmiany';$('debt-cancel').hidden=false;$('debt-form').scrollIntoView({behavior:'smooth',block:'center'});
+    editingDebtId=x.id;$('debt-form-card').hidden=false;$('show-debt-form').hidden=true;$('show-debt-form').setAttribute('aria-expanded','true');$('debt-name').value=x.name;$('debt-original').value=x.original;$('debt-remaining').value=x.remaining;$('debt-monthly').value=x.monthly||x.minimumMonthly||'';$('debt-form-title').textContent='Edytuj zadłużenie';$('debt-submit').textContent='Zapisz zmiany';$('debt-cancel').hidden=false;$('debt-form').scrollIntoView({behavior:'smooth',block:'center'});
   });
   // Import historii bankowej CSV — bezpieczny podgląd, normalizacja i deduplikacja.
   $('bud-import-btn').addEventListener('click',()=>$('bud-import-file').click());
