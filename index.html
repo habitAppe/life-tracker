@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}
+<!doctype html><html><head><meta charset="UTF-8"><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}
 /* ---------- Unified app shell + Fitness/Budget modules ---------- */
 :root { color-scheme: dark; }
 body { background-color:#101412; color:#e7eee9; }
@@ -92,7 +92,7 @@ body { background-color:#101412; color:#e7eee9; }
 .goal-actions { display:flex; gap:12px; margin-top:9px; }
 .goal-actions button { border:0; background:none; color:#9aa8a0; text-decoration:underline; cursor:pointer; padding:3px 0; font-size:12px; }
 .goal-actions button:last-child { color:#ff8a80; }
-@media(max-width:700px) { .budget-goal-grid { grid-template-columns:1fr; } }
+@media(max-width:700px) { .budget-goal-grid { grid-template-columns:1fr; } #bud-opening-form{grid-template-columns:1fr!important;} }
 
 
 /* ---------- FITNESS calendar: clarity and spacing polish (visual only) ---------- */
@@ -909,6 +909,15 @@ details.tbl .tw { overflow-x: auto; }
       </article>
       <article class="module-card">
         <div class="section-title"><h2>Bilans</h2><label class="month-picker">Miesiąc<input id="bud-month" type="month"></label></div>
+        <div class="current-balance-box" style="margin:12px 0 16px;padding:14px;border:1px solid #64734b;border-radius:14px;background:linear-gradient(145deg,#263629,#1b251e)">
+          <span class="pool-kicker">DOSTĘPNE ŚRODKI</span><div id="bud-current-balance" style="font-size:28px;font-weight:850;color:#d6f18c;margin-top:4px">0 zł</div><div id="bud-current-note" class="small muted">Ustaw saldo, od którego zaczynamy liczyć kolejne operacje.</div>
+          <form id="bud-opening-form" class="form-grid" style="margin-top:12px;grid-template-columns:1fr 1fr auto;align-items:end">
+            <label>Aktualne saldo (zł)<input id="bud-opening-amount" type="number" step="0.01" min="0" placeholder="3000,00" required></label>
+            <label>Saldo na koniec dnia<input id="bud-opening-date" type="date" required></label>
+            <button class="action primary" type="submit">Zapisz saldo</button>
+          </form>
+          <p class="small muted" style="margin:8px 0 0">Transakcje z datą późniejszą niż wskazany dzień będą automatycznie dodawane lub odejmowane. Starsza historia służy do statystyk i nie zmienia ustawionego salda.</p>
+        </div>
         <div class="stats-grid">
           <div class="stat"><span>Przychody</span><strong id="bud-income">0 zł</strong></div>
           <div class="stat"><span>Wydatki</span><strong id="bud-expense">0 zł</strong></div>
@@ -1664,6 +1673,8 @@ window.addEventListener('hashchange', function () {
   let savingsGoals = read('savingsGoals', 'life-tracker-savings-v1');
   let savingsPools = read('savingsPools', 'life-tracker-savings-pools-v1');
   let debts = read('debts', 'life-tracker-debts-v1');
+  let budgetSettings = (window.LifeTrackerStore && window.LifeTrackerStore.read('budgetSettings', null)) || (()=>{try{return JSON.parse(localStorage.getItem('life-tracker-budget-settings-v1')||'null')}catch(e){return null}})() || { openingBalance: 0, openingDate: today, updatedAt: 0 };
+  const saveBudgetSettings = () => { try{localStorage.setItem('life-tracker-budget-settings-v1',JSON.stringify(budgetSettings));}catch(e){} if(window.LifeTrackerStore)window.LifeTrackerStore.write('budgetSettings',budgetSettings); };
   let editingSavingsId = '';
   let editingDebtId = '';
   // Migracja: dotychczasowe cele zachowują swoje kwoty jako osobne pule.
@@ -1691,6 +1702,9 @@ window.addEventListener('hashchange', function () {
   $('fit-date').value = today;
   $('bud-date').value = today;
   $('bud-month').value = today.slice(0,7);
+  $('bud-opening-amount').value=Number(budgetSettings.openingBalance||0).toFixed(2);
+  $('bud-opening-date').value=budgetSettings.openingDate||today;
+  $('bud-opening-form').addEventListener('submit',e=>{e.preventDefault();const amount=Number($('bud-opening-amount').value);const date=$('bud-opening-date').value;if(!Number.isFinite(amount)||amount<0||!date){alert('Podaj prawidłowe saldo i datę.');return;}budgetSettings={openingBalance:Math.round(amount*100)/100,openingDate:date,updatedAt:Date.now()};saveBudgetSettings();renderBudget();});
 
   document.querySelectorAll('.app-tab').forEach(btn => btn.addEventListener('click', () => {
     document.querySelectorAll('.app-tab').forEach(b => b.classList.toggle('active', b === btn));
@@ -1893,6 +1907,11 @@ window.addEventListener('hashchange', function () {
     const exp=items.filter(x=>x.type==='expense').reduce((a,x)=>a+x.amount,0);
     $('bud-income').textContent=money(inc); $('bud-expense').textContent=money(exp);
     $('bud-balance').textContent=money(inc-exp); $('bud-balance').className=inc-exp>=0?'positive':'negative';
+    const opening=Number(budgetSettings.openingBalance)||0;
+    const affecting=transactions.filter(x=>x.balanceEffect===true || (x.balanceEffect===undefined && x.date>String(budgetSettings.openingDate||today))).reduce((sum,x)=>sum+(x.type==='income'?1:-1)*(Number(x.amount)||0),0);
+    const currentBalance=Math.round((opening+affecting)*100)/100;
+    $('bud-current-balance').textContent=money(currentBalance); $('bud-current-balance').style.color=currentBalance>=0?'#d6f18c':'#ff9b8f';
+    $('bud-current-note').textContent=budgetSettings.updatedAt?'Saldo bazowe: '+money(opening)+' · od '+(budgetSettings.openingDate||today):'Ustaw saldo początkowe i dzień, na który ono obowiązuje.';
     const cats={}; items.filter(x=>x.type==='expense').forEach(x=>cats[x.category]=(cats[x.category]||0)+x.amount);
     const max=Math.max(1,...Object.values(cats));
     $('bud-categories').innerHTML=Object.keys(cats).length?Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="category-row"><span>${esc(k)}</span><div class="category-bar"><i style="width:${v/max*100}%"></i></div><strong>${money(v)}</strong></div>`).join(''):'<p class="muted">Brak wydatków w tym miesiącu.</p>';
@@ -1908,7 +1927,7 @@ window.addEventListener('hashchange', function () {
   function resetSavingsForm(){ $('savings-form').reset(); $('sav-current').value='0'; $('sav-current').disabled=false; editingSavingsId=''; $('savings-form-title').textContent='Dodaj cel oszczędnościowy'; $('sav-submit').textContent='+ Dodaj cel'; $('sav-cancel').hidden=true; }
   function resetDebtForm(){ $('debt-form').reset(); editingDebtId=''; $('debt-form-title').textContent='Dodaj zadłużenie'; $('debt-submit').textContent='+ Dodaj zadłużenie'; $('debt-cancel').hidden=true; }
   $('budget-form').addEventListener('submit',e=>{
-    e.preventDefault(); transactions.push({id:Date.now(),date:$('bud-date').value,type:$('bud-type').value,name:$('bud-name').value.trim(),category:$('bud-category').value,amount:+$('bud-amount').value});
+    e.preventDefault(); transactions.push({id:Date.now(),date:$('bud-date').value,type:$('bud-type').value,name:$('bud-name').value.trim(),category:$('bud-category').value,amount:+$('bud-amount').value,balanceEffect:$('bud-date').value>String(budgetSettings.openingDate||today)||Date.now()>Number(budgetSettings.updatedAt||0)});
     write('transactions','life-tracker-budget-v1',transactions); e.target.reset(); $('bud-date').value=today; renderBudget();
   });
   $('savings-form').addEventListener('submit',e=>{
@@ -1942,7 +1961,9 @@ window.addEventListener('hashchange', function () {
     const raw=prompt((add?'Wpłata do puli „':'Wypłata z puli „')+name+'” — podaj kwotę w zł:'); if(raw===null)return;
     const amount=Number(String(raw).replace(',','.')); if(!Number.isFinite(amount)||amount<=0){alert('Podaj prawidłową kwotę większą od zera.');return;}
     if(take && amount>(+pool.balance||0)){alert('Nie można wypłacić więcej, niż znajduje się we wspólnej puli.');return;}
-    pool.balance=Math.round(((+pool.balance||0)+(add?amount:-amount))*100)/100; saveSavings(); renderBudget();
+    pool.balance=Math.round(((+pool.balance||0)+(add?amount:-amount))*100)/100;
+    transactions.push({id:Date.now()+Math.random(),date:today,type:add?'expense':'income',name:(add?'Wpłata do puli: ':'Wypłata z puli: ')+name,category:'Oszczędności',amount,balanceEffect:true,poolName:name});
+    write('transactions','life-tracker-budget-v1',transactions);saveSavings();renderBudget();
   });
   $('debts-list').addEventListener('click',e=>{
     const del=e.target.closest('[data-debt-delete]'); if(del){debts=debts.filter(x=>String(x.id)!==del.dataset.debtDelete);write('debts','life-tracker-debts-v1',debts);renderBudget();return;}
@@ -1985,12 +2006,14 @@ window.addEventListener('hashchange', function () {
   $('bud-import-file').addEventListener('change',async e=>{
     const file=e.target.files&&e.target.files[0];if(!file)return;
     try{
-      // mBank potrafi zapisywać CSV w Windows-1250; najpierw próbujemy UTF-8,
-      // a przy błędzie dekodujemy polskie znaki przez stronę kodową Windows.
-      const buffer=await file.arrayBuffer();let raw;
-      try{raw=new TextDecoder('utf-8',{fatal:true}).decode(buffer);}
-      catch(_){raw=new TextDecoder('windows-1250').decode(buffer);}
-      raw=raw.replace(/^\uFEFF/,'');
+      // mBank/Excel może zapisać plik jako UTF-8, Windows-1250 lub UTF-16.
+      // Wykrywamy BOM i układ bajtów, by nie zamieniać polskich liter na romby.
+      const buffer=await file.arrayBuffer();const bytes=new Uint8Array(buffer);let raw;
+      if(bytes.length>=2&&bytes[0]===0xFF&&bytes[1]===0xFE)raw=new TextDecoder('utf-16le').decode(buffer);
+      else if(bytes.length>=2&&bytes[0]===0xFE&&bytes[1]===0xFF)raw=new TextDecoder('utf-16be').decode(buffer);
+      else if(bytes.length>=3&&bytes[0]===0xEF&&bytes[1]===0xBB&&bytes[2]===0xBF)raw=new TextDecoder('utf-8',{fatal:true}).decode(buffer);
+      else {const evenNull=bytes.filter((b,i)=>i%2===0&&b===0).length;const oddNull=bytes.filter((b,i)=>i%2===1&&b===0).length;if(oddNull>bytes.length/8)raw=new TextDecoder('utf-16le').decode(buffer);else if(evenNull>bytes.length/8)raw=new TextDecoder('utf-16be').decode(buffer);else{try{raw=new TextDecoder('utf-8',{fatal:true}).decode(buffer);}catch(_){raw=new TextDecoder('windows-1250').decode(buffer);}}}
+      raw=raw.replace(/^\uFEFF/,'').replace(/\u0000/g,'');
       // Eksport mBanku zawiera kilka wierszy informacyjnych przed właściwym nagłówkiem.
       // Ustal separator na podstawie wiersza z nagłówkami, a nie pierwszej linii pliku.
       const lines=raw.split(/\r?\n/);let delim=';';
@@ -2012,14 +2035,18 @@ window.addEventListener('hashchange', function () {
       const parsed=[];
       rows.slice(headerIndex+1).forEach(r=>{
         const date=parseBankDate(r[di]);const amountRaw=parseMoney(r[ai]);if(!date||!Number.isFinite(amountRaw)||amountRaw===0)return;
-        const description=(ni>=0?r[ni]:'')|| (descriptionIndex>=0?r[descriptionIndex]:'') || (senderIndex>=0?r[senderIndex]:'') || (ti>=0?r[ti]:'') || 'Transakcja z banku';
+        const firstText=[ni>=0?r[ni]:'',titleIndex>=0?r[titleIndex]:'',descriptionIndex>=0?r[descriptionIndex]:'',senderIndex>=0?r[senderIndex]:'',ti>=0?r[ti]:''].map(v=>String(v||'').trim()).find(Boolean);
+        const description=firstText||'Transakcja z banku';
         const operation=ti>=0?r[ti]:'';const title=titleIndex>=0?r[titleIndex]:'';const sender=senderIndex>=0?r[senderIndex]:'';
         const typeText=ti>=0?normHead(r[ti]):'';
         const isIncome=/uznanie|wplyw|przychod|income|wplata|wynagrodzen|pensj/.test(typeText)||amountRaw>0;
         const category=ci>=0&&r[ci]&&r[ci].trim()?r[ci].trim():categorizeBankTransaction([operation,title,sender,description],isIncome);
-        parsed.push({id:Date.now()+Math.random(),date,type:isIncome?'income':'expense',name:String(description).trim()||'Transakcja z banku',category,amount:Math.abs(amountRaw)});
+        parsed.push({id:Date.now()+Math.random(),date,type:isIncome?'income':'expense',name:String(description).trim()||'Transakcja z banku',category,amount:Math.abs(amountRaw),balanceEffect:date>String(budgetSettings.openingDate||today),source:'bank'});
       });
       if(!parsed.length)throw new Error('Nie udało się odczytać żadnych transakcji.');
+      // Wcześniejsze wersje mogły zapisać znak zastępczy zamiast polskiej litery.
+      // Takie rekordy usuwamy przed ponownym importem, aby czysty CSV mógł je zastąpić.
+      transactions=transactions.filter(x=>!String(x.name||'').includes(' '));
       const seen=new Set(transactions.map(txFingerprint));const fresh=parsed.filter(x=>{const key=txFingerprint(x);if(seen.has(key))return false;seen.add(key);return true;});
       const duplicates=parsed.length-fresh.length;
       const summary=fresh.slice(0,5).map(x=>`${x.date} · ${x.type==='income'?'Przychód':'Wydatek'} · ${x.name} · ${money(x.amount)}`).join('\n');
@@ -2084,6 +2111,7 @@ window.addEventListener('hashchange', function () {
       if (data && Array.isArray(data.savingsGoals)) localStorage.setItem('life-tracker-savings-v1', JSON.stringify(data.savingsGoals));
       if (data && Array.isArray(data.savingsPools)) localStorage.setItem('life-tracker-savings-pools-v1', JSON.stringify(data.savingsPools));
       if (data && Array.isArray(data.debts)) localStorage.setItem('life-tracker-debts-v1', JSON.stringify(data.debts));
+      if (data && data.budgetSettings) localStorage.setItem('life-tracker-budget-settings-v1', JSON.stringify(data.budgetSettings));
     } finally { applyingRemote = false; }
   }
   function showSignedIn(user) {
