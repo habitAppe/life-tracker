@@ -428,6 +428,55 @@ body { background-color:#101412; color:#e7eee9; }
 @media(prefers-reduced-motion:reduce) { *,*:before,*:after { scroll-behavior:auto!important; transition:none!important; } }
 
 </style>
+
+<style id="lifetracker-final-visual-polish">
+/* LifeTracker — spokojniejsza, spójna paleta i dopracowane moduły */
+:root{--lt-mint:#62c6a2;--lt-blue:#79a9df;--lt-amber:#e2b36d;--lt-violet:#a995d8;--lt-coral:#d98772;--lt-surface:#1a231f;--lt-surface-2:#141b17;--lt-border:#303e36;}
+.appnav{background:rgba(15,20,17,.96);border-bottom-color:#34443a;box-shadow:0 8px 24px rgba(0,0,0,.16)}
+.app-tab{transition:background .18s,border-color .18s,color .18s,transform .18s}
+.app-tab:hover{border-color:#60776a;background:#222e27;color:#edf5ef;transform:translateY(-1px)}
+.app-tab.active{background:#62c6a2;border-color:#62c6a2;color:#102019;box-shadow:0 4px 14px rgba(98,198,162,.16)}
+.module-head{gap:16px;flex-wrap:wrap}.module-head h1{line-height:1.08;letter-spacing:-.045em}
+.module-card{background:linear-gradient(145deg,#1b2520,#171e1a);border-color:#334239;border-radius:17px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:20px;transition:border-color .18s,transform .18s,box-shadow .18s}
+.module-card h2{letter-spacing:-.025em;color:#edf4ef}
+.form-grid input,.form-grid select,.form-grid textarea,.month-picker input{border-color:#3a4b41;background:#111814;transition:border-color .18s,box-shadow .18s}
+.form-grid input:focus,.form-grid select:focus,.form-grid textarea:focus,.month-picker input:focus{outline:none;border-color:#72c9a8;box-shadow:0 0 0 3px rgba(98,198,162,.13)}
+.action{transition:transform .16s,background .16s,border-color .16s,box-shadow .16s}.action:hover{transform:translateY(-1px);border-color:#647b6c;box-shadow:0 5px 13px rgba(0,0,0,.16)}
+.action.primary{background:#62c6a2;border-color:#62c6a2;color:#102019}.action.primary:hover{background:#79d5b3;border-color:#79d5b3}
+.stats-grid .stat{border-radius:13px;background:linear-gradient(145deg,#141c17,#18221c);border-color:#34443a;padding:15px}
+.stats-grid .stat:nth-child(1){border-top:2px solid #62c6a2}.stats-grid .stat:nth-child(2){border-top:2px solid #79a9df}.stats-grid .stat:nth-child(3){border-top:2px solid #e2b36d}
+.entry{border-radius:12px;border-color:#334239;background:#131a16;transition:border-color .16s,background .16s}.entry:hover{border-color:#647c6b;background:#19231d}
+.category-bar{background:#27352d;height:9px}.category-bar i{background:linear-gradient(90deg,#62c6a2,#79a9df)}
+.goal-card{background:linear-gradient(145deg,#131b16,#19231d);border-color:#35463b;border-radius:14px;padding:16px}.goal-track{height:10px;background:#29372e}.goal-track i{background:linear-gradient(90deg,#62c6a2,#79a9df)}.goal-track.debt i{background:linear-gradient(90deg,#e2b36d,#d98772)}
+.positive{color:#75d2ae}.negative{color:#e49a88}
+/* Habits: zachowujemy jasny, czytelny charakter tego modułu, ale nadajemy mu bardziej premium wykończenie */
+#panel-habits .wrap{max-width:1080px;padding:26px 18px 56px}
+#panel-habits .top{gap:16px;margin-bottom:20px}
+#panel-habits h1{letter-spacing:-.045em}
+#panel-habits .sum{border:1px solid #d8e2da;border-radius:15px;box-shadow:0 5px 18px rgba(30,55,40,.045);padding:15px;background:linear-gradient(145deg,#fff,#f8fbf8)}
+#panel-habits .summaries .sum:first-child{border-left:4px solid #238765}
+#panel-habits .summaries .sum:last-child{border-left:4px solid #477ecb}
+#panel-habits .habit{border-radius:16px;border-color:#d5dfd7;padding:16px;box-shadow:0 5px 18px rgba(30,55,40,.045);transition:transform .18s,border-color .18s,box-shadow .18s}
+#panel-habits .habit:hover{transform:translateY(-2px);border-color:#a9c5b2;box-shadow:0 10px 24px rgba(30,55,40,.08)}
+#panel-habits .hh h3{letter-spacing:-.025em}
+#panel-habits .habit-tag{background:#f4f8f4;border-color:#dce6de}
+#panel-habits .bar{height:11px;background:#e6ede7}
+#panel-habits .bar i{border-radius:99px}
+#panel-habits .day,#panel-habits .cc{border-radius:9px;transition:background .15s,border-color .15s,transform .15s}
+#panel-habits .day[aria-pressed="true"],#panel-habits .cc[aria-pressed="true"]{box-shadow:0 2px 7px rgba(25,90,65,.14)}
+#panel-habits .ctl,#panel-habits .btn,#panel-habits .addbtn{transition:transform .16s,box-shadow .16s}
+#panel-habits .btn:hover,#panel-habits .addbtn:hover{transform:translateY(-1px);box-shadow:0 5px 12px rgba(25,60,40,.1)}
+#panel-habits .panel{border-radius:16px;box-shadow:0 8px 25px rgba(30,55,40,.06)}
+/* Wykres tętna — stonowany koral, bez neonowej poświaty */
+.fit-detail-chart{background:linear-gradient(180deg,rgba(217,135,114,.055),transparent 65%),#121a15!important;border-color:#35463b!important;border-radius:14px!important}
+.fit-detail-chart polyline{stroke:#d98772!important;stroke-width:3!important;filter:none!important}
+.fit-detail-chart line{stroke:#35463b!important}.fit-detail-chart text{fill:#aebbb2!important}
+.fit-detail-stat:nth-child(6n+1){--detail-accent:#62c6a2}.fit-detail-stat:nth-child(6n+2){--detail-accent:#79a9df}.fit-detail-stat:nth-child(6n+3){--detail-accent:#e2b36d}.fit-detail-stat:nth-child(6n+4){--detail-accent:#a995d8}.fit-detail-stat:nth-child(6n+5){--detail-accent:#d98772}.fit-detail-stat:nth-child(6n){--detail-accent:#75b8c8}
+.fit-detail-stat{border-top:2px solid var(--detail-accent,#62c6a2)!important}
+@media(max-width:700px){.module-card{padding:16px;border-radius:14px}.module-wrap{padding:18px 11px 42px}#panel-habits .wrap{padding:18px 11px 42px}#panel-habits .habit{padding:13px}}
+@media(prefers-reduced-motion:reduce){.module-card,.entry,.action,.app-tab,#panel-habits .habit{transition:none!important}}
+</style>
+
 </head><body>
 <title>Karta nawyków</title>
 <meta name="claude:viewport-fit-sides" content="cover">
