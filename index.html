@@ -79,6 +79,21 @@ body { background-color:#101412; color:#e7eee9; }
 .fit-form-actions { display:flex; gap:8px; grid-column:1/-1; flex-wrap:wrap; }
 @media(max-width:600px) { .fit-cal-grid { gap:3px; } .fit-day { min-height:76px; padding:4px; border-radius:6px; } .fit-event { font-size:9px; padding:2px 3px; } .fit-day-num { font-size:10px; } }
 
+
+.goal-list { display:grid; gap:10px; }
+.goal-card { background:#101412; border:1px solid #2b3430; border-radius:11px; padding:13px; min-width:0; }
+.goal-card-head { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }
+.goal-card-head strong { overflow-wrap:anywhere; }
+.goal-amount { font-weight:700; white-space:nowrap; }
+.goal-track { height:9px; border-radius:20px; background:#26302b; overflow:hidden; margin:11px 0 7px; }
+.goal-track i { display:block; height:100%; border-radius:20px; background:#4bc59b; }
+.goal-track.debt i { background:#f0b14a; }
+.goal-foot { display:flex; justify-content:space-between; gap:8px; color:#9aa8a0; font-size:11px; flex-wrap:wrap; }
+.goal-actions { display:flex; gap:12px; margin-top:9px; }
+.goal-actions button { border:0; background:none; color:#9aa8a0; text-decoration:underline; cursor:pointer; padding:3px 0; font-size:12px; }
+.goal-actions button:last-child { color:#ff8a80; }
+@media(max-width:700px) { .budget-goal-grid { grid-template-columns:1fr; } }
+
 </style><link rel="manifest" href="/life-tracker/manifest.webmanifest"></head><body>
 <title>Karta nawyków</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -398,6 +413,38 @@ details.tbl .tw { overflow-x: auto; }
         </div>
         <h3 class="subheading">Wydatki według kategorii</h3>
         <div id="bud-categories" class="category-list"><p class="muted">Brak wydatków w tym miesiącu.</p></div>
+      </article>
+    </div>
+    <div class="module-grid budget-goal-grid">
+      <article class="module-card">
+        <h2 id="savings-form-title">Dodaj cel oszczędnościowy</h2>
+        <form id="savings-form" class="form-grid">
+          <label class="wide">Nazwa celu<input id="sav-name" type="text" placeholder="np. Poduszka finansowa" required></label>
+          <label>Kwota docelowa (zł)<input id="sav-target" type="number" min="0.01" step="0.01" placeholder="10000" required></label>
+          <label>Odłożono obecnie (zł)<input id="sav-current" type="number" min="0" step="0.01" placeholder="0" value="0" required></label>
+          <label class="wide">Planowana wpłata miesięczna (zł)<input id="sav-monthly" type="number" min="0" step="0.01" placeholder="opcjonalnie"></label>
+          <div class="fit-form-actions"><button id="sav-submit" class="action primary" type="submit">+ Dodaj cel</button><button id="sav-cancel" class="action" type="button" hidden>Anuluj</button></div>
+        </form>
+      </article>
+      <article class="module-card">
+        <h2 id="debt-form-title">Dodaj zadłużenie</h2>
+        <form id="debt-form" class="form-grid">
+          <label class="wide">Nazwa zadłużenia<input id="debt-name" type="text" placeholder="np. Kredyt, rata za sprzęt" required></label>
+          <label>Kwota początkowa (zł)<input id="debt-original" type="number" min="0.01" step="0.01" placeholder="15000" required></label>
+          <label>Pozostało do spłaty (zł)<input id="debt-remaining" type="number" min="0" step="0.01" placeholder="15000" required></label>
+          <label class="wide">Miesięczna rata (zł)<input id="debt-monthly" type="number" min="0" step="0.01" placeholder="opcjonalnie"></label>
+          <div class="fit-form-actions"><button id="debt-submit" class="action primary" type="submit">+ Dodaj zadłużenie</button><button id="debt-cancel" class="action" type="button" hidden>Anuluj</button></div>
+        </form>
+      </article>
+    </div>
+    <div class="module-grid budget-goal-grid">
+      <article class="module-card">
+        <div class="section-title"><h2>Cele oszczędnościowe</h2><span id="sav-total" class="muted small"></span></div>
+        <div id="savings-list" class="goal-list"><p class="muted">Nie dodano jeszcze celów.</p></div>
+      </article>
+      <article class="module-card">
+        <div class="section-title"><h2>Spłata zadłużeń</h2><span id="debt-total" class="muted small"></span></div>
+        <div id="debts-list" class="goal-list"><p class="muted">Nie dodano jeszcze zadłużeń.</p></div>
       </article>
     </div>
     <article class="module-card">
@@ -1099,6 +1146,10 @@ window.addEventListener('hashchange', function () {
   };
   let workouts = read('workouts', 'life-tracker-fitness-v1');
   let transactions = read('transactions', 'life-tracker-budget-v1');
+  let savingsGoals = read('savingsGoals', 'life-tracker-savings-v1');
+  let debts = read('debts', 'life-tracker-debts-v1');
+  let editingSavingsId = '';
+  let editingDebtId = '';
   $('fit-date').value = today;
   $('bud-date').value = today;
   $('bud-month').value = today.slice(0,7);
@@ -1207,15 +1258,46 @@ window.addEventListener('hashchange', function () {
     const max=Math.max(1,...Object.values(cats));
     $('bud-categories').innerHTML=Object.keys(cats).length?Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="category-row"><span>${esc(k)}</span><div class="category-bar"><i style="width:${v/max*100}%"></i></div><strong>${money(v)}</strong></div>`).join(''):'<p class="muted">Brak wydatków w tym miesiącu.</p>';
     $('budget-list').innerHTML=transactions.length?transactions.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(x=>`<div class="entry"><div class="entry-main"><strong>${esc(x.name)}</strong><div class="entry-meta">${esc(x.date)} · ${esc(x.category)}</div></div><div class="entry-side"><strong class="${x.type==='income'?'positive':'negative'}">${x.type==='income'?'+':'−'}${money(x.amount)}</strong><button data-bud-delete="${x.id}">Usuń</button></div></div>`).join(''):'<p class="muted">Nie dodano jeszcze transakcji.</p>';
+    const saved=savingsGoals.reduce((a,x)=>a+(+x.current||0),0), target=savingsGoals.reduce((a,x)=>a+(+x.target||0),0);
+    $('sav-total').textContent=savingsGoals.length?`${money(saved)} / ${money(target)}`:'';
+    $('savings-list').innerHTML=savingsGoals.length?savingsGoals.map(x=>{const pct=x.target>0?Math.min(100,Math.max(0,(x.current/x.target)*100)):0;return `<div class="goal-card"><div class="goal-card-head"><strong>${esc(x.name)}</strong><span class="goal-amount">${pct.toFixed(0)}%</span></div><div class="goal-track"><i style="width:${pct}%"></i></div><div class="goal-foot"><span>${money(+x.current||0)} z ${money(+x.target||0)}</span><span>${x.monthly>0?'Plan: '+money(+x.monthly)+'/mies.':''}</span></div><div class="goal-actions"><button data-sav-edit="${x.id}">Edytuj</button><button data-sav-delete="${x.id}">Usuń</button></div></div>`}).join(''):'<p class="muted">Nie dodano jeszcze celów.</p>';
+    const original=debts.reduce((a,x)=>a+(+x.original||0),0), remaining=debts.reduce((a,x)=>a+(+x.remaining||0),0);
+    $('debt-total').textContent=debts.length?`Pozostało: ${money(remaining)}`:'';
+    $('debts-list').innerHTML=debts.length?debts.map(x=>{const paid=Math.max(0,(+x.original||0)-(+x.remaining||0));const pct=x.original>0?Math.min(100,Math.max(0,(paid/x.original)*100)):0;return `<div class="goal-card"><div class="goal-card-head"><strong>${esc(x.name)}</strong><span class="goal-amount">${pct.toFixed(0)}% spłacono</span></div><div class="goal-track debt"><i style="width:${pct}%"></i></div><div class="goal-foot"><span>Pozostało: ${money(+x.remaining||0)} z ${money(+x.original||0)}</span><span>${x.monthly>0?'Rata: '+money(+x.monthly)+'/mies.':''}</span></div><div class="goal-actions"><button data-debt-edit="${x.id}">Edytuj</button><button data-debt-delete="${x.id}">Usuń</button></div></div>`}).join(''):'<p class="muted">Nie dodano jeszcze zadłużeń.</p>';
   }
+  function resetSavingsForm(){ $('savings-form').reset(); $('sav-current').value='0'; editingSavingsId=''; $('savings-form-title').textContent='Dodaj cel oszczędnościowy'; $('sav-submit').textContent='+ Dodaj cel'; $('sav-cancel').hidden=true; }
+  function resetDebtForm(){ $('debt-form').reset(); editingDebtId=''; $('debt-form-title').textContent='Dodaj zadłużenie'; $('debt-submit').textContent='+ Dodaj zadłużenie'; $('debt-cancel').hidden=true; }
   $('budget-form').addEventListener('submit',e=>{
     e.preventDefault(); transactions.push({id:Date.now(),date:$('bud-date').value,type:$('bud-type').value,name:$('bud-name').value.trim(),category:$('bud-category').value,amount:+$('bud-amount').value});
     write('transactions','life-tracker-budget-v1',transactions); e.target.reset(); $('bud-date').value=today; renderBudget();
   });
+  $('savings-form').addEventListener('submit',e=>{
+    e.preventDefault(); const item={id:editingSavingsId||Date.now(),name:$('sav-name').value.trim(),target:+$('sav-target').value,current:+$('sav-current').value,monthly:+$('sav-monthly').value||0};
+    if(item.current>item.target){alert('Kwota odłożona nie może być większa niż kwota docelowa.');return;}
+    if(editingSavingsId) savingsGoals=savingsGoals.map(x=>String(x.id)===String(editingSavingsId)?item:x); else savingsGoals.push(item);
+    write('savingsGoals','life-tracker-savings-v1',savingsGoals); resetSavingsForm(); renderBudget();
+  });
+  $('debt-form').addEventListener('submit',e=>{
+    e.preventDefault(); const item={id:editingDebtId||Date.now()+1,name:$('debt-name').value.trim(),original:+$('debt-original').value,remaining:+$('debt-remaining').value,monthly:+$('debt-monthly').value||0};
+    if(item.remaining>item.original){alert('Pozostała kwota nie może być większa niż kwota początkowa.');return;}
+    if(editingDebtId) debts=debts.map(x=>String(x.id)===String(editingDebtId)?item:x); else debts.push(item);
+    write('debts','life-tracker-debts-v1',debts); resetDebtForm(); renderBudget();
+  });
+  $('sav-cancel').addEventListener('click',resetSavingsForm); $('debt-cancel').addEventListener('click',resetDebtForm);
   $('bud-month').addEventListener('change',renderBudget);
   $('budget-list').addEventListener('click',e=>{
     const b=e.target.closest('[data-bud-delete]'); if(!b)return;
     transactions=transactions.filter(x=>String(x.id)!==b.dataset.budDelete); write('transactions','life-tracker-budget-v1',transactions); renderBudget();
+  });
+  $('savings-list').addEventListener('click',e=>{
+    const del=e.target.closest('[data-sav-delete]'); if(del){savingsGoals=savingsGoals.filter(x=>String(x.id)!==del.dataset.savDelete);write('savingsGoals','life-tracker-savings-v1',savingsGoals);renderBudget();return;}
+    const edit=e.target.closest('[data-sav-edit]'); if(!edit)return; const x=savingsGoals.find(v=>String(v.id)===edit.dataset.savEdit);if(!x)return;
+    editingSavingsId=x.id;$('sav-name').value=x.name;$('sav-target').value=x.target;$('sav-current').value=x.current;$('sav-monthly').value=x.monthly||'';$('savings-form-title').textContent='Edytuj cel oszczędnościowy';$('sav-submit').textContent='Zapisz zmiany';$('sav-cancel').hidden=false;$('savings-form').scrollIntoView({behavior:'smooth',block:'center'});
+  });
+  $('debts-list').addEventListener('click',e=>{
+    const del=e.target.closest('[data-debt-delete]'); if(del){debts=debts.filter(x=>String(x.id)!==del.dataset.debtDelete);write('debts','life-tracker-debts-v1',debts);renderBudget();return;}
+    const edit=e.target.closest('[data-debt-edit]'); if(!edit)return; const x=debts.find(v=>String(v.id)===edit.dataset.debtEdit);if(!x)return;
+    editingDebtId=x.id;$('debt-name').value=x.name;$('debt-original').value=x.original;$('debt-remaining').value=x.remaining;$('debt-monthly').value=x.monthly||'';$('debt-form-title').textContent='Edytuj zadłużenie';$('debt-submit').textContent='Zapisz zmiany';$('debt-cancel').hidden=false;$('debt-form').scrollIntoView({behavior:'smooth',block:'center'});
   });
   $('bud-export').addEventListener('click',()=>{
     const rows=[['data','typ','nazwa','kategoria','kwota'],...transactions.map(x=>[x.date,x.type,x.name,x.category,x.amount])];
@@ -1264,6 +1346,8 @@ window.addEventListener('hashchange', function () {
       if (data && data.habits) localStorage.setItem('karta-nawykow-v1', JSON.stringify(data.habits));
       if (data && Array.isArray(data.workouts)) localStorage.setItem('life-tracker-fitness-v1', JSON.stringify(data.workouts));
       if (data && Array.isArray(data.transactions)) localStorage.setItem('life-tracker-budget-v1', JSON.stringify(data.transactions));
+      if (data && Array.isArray(data.savingsGoals)) localStorage.setItem('life-tracker-savings-v1', JSON.stringify(data.savingsGoals));
+      if (data && Array.isArray(data.debts)) localStorage.setItem('life-tracker-debts-v1', JSON.stringify(data.debts));
     } finally { applyingRemote = false; }
   }
   function showSignedIn(user) {
