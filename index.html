@@ -939,7 +939,8 @@ details.tbl .tw { overflow-x: auto; }
           <label class="wide">Nazwa celu<input id="sav-name" type="text" placeholder="np. Poduszka na 3 miesiące" required></label>
           <label class="wide">Wspólna pula / kategoria<input id="sav-category" type="text" placeholder="np. Poduszka finansowa" required></label>
           <label>Kwota docelowa (zł)<input id="sav-target" type="number" min="0.01" step="0.01" placeholder="15000" required></label>
-          <label>Stan początkowy puli (zł)<input id="sav-current" type="number" min="0" step="0.01" placeholder="0" value="0" required></label>
+          <label>Gotówka na start (zł)<input id="sav-current-cash" type="number" min="0" step="0.01" placeholder="0" value="0" required></label>
+          <label>Pieniądze na koncie na start (zł)<input id="sav-current-account" type="number" min="0" step="0.01" placeholder="0" value="0" required></label>
           <label class="wide">Planowana wpłata miesięczna (zł)<input id="sav-monthly" type="number" min="0" step="0.01" placeholder="opcjonalnie"></label>
           <div class="fit-form-actions"><button id="sav-submit" class="action primary" type="submit">+ Dodaj cel</button><button id="sav-cancel" class="action" type="button" hidden>Anuluj</button></div>
         </form>
@@ -1751,7 +1752,7 @@ window.addEventListener('hashchange', function () {
       const category = String(g.category || g.name || 'Oszczędności').trim();
       const key = category.toLocaleLowerCase('pl-PL');
       if (!seen.has(key)) {
-        savingsPools.push({ id: 'pool-' + Date.now() + '-' + seen.size, name: category, balance: Math.max(0, +g.current || 0) });
+        savingsPools.push({ id: 'pool-' + Date.now() + '-' + seen.size, name: category, cashBalance: 0, accountBalance: Math.max(0, +g.current || 0), balance: Math.max(0, +g.current || 0) });
         seen.add(key);
       }
       return { ...g, category };
@@ -1764,6 +1765,10 @@ window.addEventListener('hashchange', function () {
   }
   function poolKey(name){ return String(name || '').trim().toLocaleLowerCase('pl-PL'); }
   function getPool(name){ return savingsPools.find(p => poolKey(p.name) === poolKey(name)); }
+  function poolCash(pool){ return Math.max(0, +(pool?.cashBalance ?? 0) || 0); }
+  function poolAccount(pool){ return Math.max(0, +(pool?.accountBalance ?? pool?.balance ?? 0) || 0); }
+  function poolTotal(pool){ return Math.round((poolCash(pool)+poolAccount(pool))*100)/100; }
+  function normalizePool(pool){ if(pool.cashBalance===undefined) pool.cashBalance=0; if(pool.accountBalance===undefined) pool.accountBalance=Math.max(0,+pool.balance||0); pool.balance=poolTotal(pool); return pool; }
   function saveSavings(){ write('savingsGoals','life-tracker-savings-v1',savingsGoals); write('savingsPools','life-tracker-savings-pools-v1',savingsPools); }
   $('fit-date').value = today;
   $('bud-date').value = today;
@@ -1982,15 +1987,15 @@ window.addEventListener('hashchange', function () {
     const max=Math.max(1,...Object.values(cats));
     $('bud-categories').innerHTML=Object.keys(cats).length?Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="category-row"><span>${esc(k)}</span><div class="category-bar"><i style="width:${v/max*100}%"></i></div><strong>${money(v)}</strong></div>`).join(''):'<p class="muted">Brak wydatków w tym miesiącu.</p>';
     $('budget-list').innerHTML=transactions.length?transactions.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(x=>`<div class="entry"><div class="entry-main"><strong>${esc(x.name)}</strong><div class="entry-meta">${esc(x.date)} · ${esc(x.category)}</div></div><div class="entry-side"><strong class="${x.type==='income'?'positive':'negative'}">${x.type==='income'?'+':'−'}${money(x.amount)}</strong><button data-bud-delete="${x.id}">Usuń</button></div></div>`).join(''):'<p class="muted">Nie dodano jeszcze transakcji.</p>';
-    const poolTotal=savingsPools.reduce((a,p)=>a+(+p.balance||0),0), targetTotal=savingsGoals.reduce((a,x)=>a+(+x.target||0),0);
+    const poolTotal=savingsPools.reduce((a,p)=>a+poolTotal(normalizePool(p)),0), targetTotal=savingsGoals.reduce((a,x)=>a+(+x.target||0),0);
     $('sav-total').textContent=savingsGoals.length?`${money(poolTotal)} łącznie odłożono`:'';
     const grouped={}; savingsGoals.forEach(g=>{const k=poolKey(g.category||g.name);(grouped[k]||(grouped[k]={name:g.category||g.name,goals:[]})).goals.push(g);});
-    $('savings-list').innerHTML=savingsGoals.length?Object.values(grouped).map(group=>{const pool=getPool(group.name)||{balance:0};const balance=+pool.balance||0;const groupTarget=group.goals.reduce((a,g)=>a+(+g.target||0),0);const groupPct=groupTarget>0?Math.min(100,balance/groupTarget*100):0;return `<section class="savings-pool"><div class="pool-head"><div><span class="pool-kicker">WSPÓLNA PULA</span><h3>${esc(group.name)}</h3></div><strong>${money(balance)}</strong></div><div class="goal-track pool-track"><i style="width:${groupPct}%"></i></div><div class="pool-foot"><span>${group.goals.length} ${group.goals.length===1?'cel':'cele'} · łączny próg ${money(groupTarget)}</span><span>${groupPct.toFixed(0)}%</span></div><div class="pool-actions"><button data-pool-add="${esc(group.name)}">+ Wpłata</button><button data-pool-take="${esc(group.name)}">− Wypłata</button></div><div class="pool-goals">${group.goals.map(x=>{const pct=x.target>0?Math.min(100,Math.max(0,balance/x.target*100)):0;return `<div class="goal-card"><div class="goal-card-head"><strong>${esc(x.name)}</strong><span class="goal-amount">${pct.toFixed(0)}%</span></div><div class="goal-track"><i style="width:${pct}%"></i></div><div class="goal-foot"><span>${money(balance)} z ${money(+x.target||0)}</span><span>${x.monthly>0?'Plan: '+money(+x.monthly)+'/mies.':''}</span></div><div class="goal-actions"><button data-sav-edit="${x.id}">Edytuj</button><button data-sav-delete="${x.id}">Usuń</button></div></div>`}).join('')}</div></section>`}).join(''):'<p class="muted">Nie dodano jeszcze celów.</p>';
+    $('savings-list').innerHTML=savingsGoals.length?Object.values(grouped).map(group=>{const pool=normalizePool(getPool(group.name)||{cashBalance:0,accountBalance:0});const balance=poolTotal(pool);const groupTarget=group.goals.reduce((a,g)=>a+(+g.target||0),0);const groupPct=groupTarget>0?Math.min(100,balance/groupTarget*100):0;return `<section class="savings-pool"><div class="pool-head"><div><span class="pool-kicker">WSPÓLNA PULA</span><h3>${esc(group.name)}</h3></div><strong>${money(balance)}</strong></div><div class="goal-track pool-track"><i style="width:${groupPct}%"></i></div><div class="pool-foot"><span>${group.goals.length} ${group.goals.length===1?'cel':'cele'} · łączny próg ${money(groupTarget)}</span><span>${groupPct.toFixed(0)}%</span></div><div class="pool-foot"><span>Gotówka: <strong>${money(poolCash(pool))}</strong></span><span>Konto: <strong>${money(poolAccount(pool))}</strong></span></div><div class="pool-actions"><button data-pool-add-cash="${esc(group.name)}">+ Gotówka</button><button data-pool-add-account="${esc(group.name)}">+ Na konto</button><button data-pool-take-cash="${esc(group.name)}">− Gotówka</button><button data-pool-take-account="${esc(group.name)}">− Z konta</button></div><div class="pool-goals">${group.goals.map(x=>{const pct=x.target>0?Math.min(100,Math.max(0,balance/x.target*100)):0;return `<div class="goal-card"><div class="goal-card-head"><strong>${esc(x.name)}</strong><span class="goal-amount">${pct.toFixed(0)}%</span></div><div class="goal-track"><i style="width:${pct}%"></i></div><div class="goal-foot"><span>${money(balance)} z ${money(+x.target||0)}</span><span>${x.monthly>0?'Plan: '+money(+x.monthly)+'/mies.':''}</span></div><div class="goal-actions"><button data-sav-edit="${x.id}">Edytuj</button><button data-sav-delete="${x.id}">Usuń</button></div></div>`}).join('')}</div></section>`}).join(''):'<p class="muted">Nie dodano jeszcze celów.</p>';
     const original=debts.reduce((a,x)=>a+(+x.original||0),0), remaining=debts.reduce((a,x)=>a+(+x.remaining||0),0);
     $('debt-total').textContent=debts.length?`Pozostało: ${money(remaining)}`:'';
     $('debts-list').innerHTML=debts.length?debts.map(x=>{const paid=Math.max(0,(+x.original||0)-(+x.remaining||0));const pct=x.original>0?Math.min(100,Math.max(0,(paid/x.original)*100)):0;const monthly=+(x.monthly||x.minimumMonthly||0);const months=monthly>0?Math.ceil((+x.remaining||0)/monthly):0;let payoff='Ustaw minimalną spłatę, aby obliczyć datę.';if((+x.remaining||0)<=0)payoff='Spłacone';else if(months>0){const d=new Date();d.setHours(12,0,0,0);d.setMonth(d.getMonth()+months);payoff='Przewidywana spłata: '+d.toLocaleDateString('pl-PL',{month:'long',year:'numeric'});}const history=Array.isArray(x.payments)?x.payments.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))):[];return `<div class="goal-card"><div class="goal-card-head"><strong>${esc(x.name)}</strong><span class="goal-amount">${pct.toFixed(0)}% spłacono</span></div><div class="goal-track debt"><i style="width:${pct}%"></i></div><div class="goal-foot"><span>Pozostało: ${money(+x.remaining||0)} z ${money(+x.original||0)}</span><span>Min. ${money(monthly)}/mies.</span></div><p class="small muted" style="margin:8px 0 4px">${payoff}${months>0?' · około '+months+' mies.':''}</p><div class="pool-actions"><button data-debt-pay="${x.id}">+ Dodaj spłatę</button></div>${history.length?`<details class="small" style="margin-top:8px"><summary>Historia spłat (${history.length})</summary><div class="entry-list" style="margin-top:8px">${history.map(h=>`<div class="entry"><div class="entry-main"><strong>${money(+h.amount||0)}</strong><div class="entry-meta">${esc(h.date||'')}</div></div></div>`).join('')}</div></details>`:''}<div class="goal-actions"><button data-debt-edit="${x.id}">Edytuj</button><button data-debt-delete="${x.id}">Usuń</button></div></div>`}).join(''):'<p class="muted">Nie dodano jeszcze zadłużeń.</p>';
   }
-  function resetSavingsForm(){ $('savings-form').reset(); $('sav-current').value='0'; $('sav-current').disabled=false; editingSavingsId=''; $('savings-form-title').textContent='Dodaj cel oszczędnościowy'; $('sav-submit').textContent='+ Dodaj cel'; $('sav-cancel').hidden=true; }
+  function resetSavingsForm(){ $('savings-form').reset(); $('sav-current-cash').value='0'; $('sav-current-account').value='0'; $('sav-current-cash').disabled=false; $('sav-current-account').disabled=false; editingSavingsId=''; $('savings-form-title').textContent='Dodaj cel oszczędnościowy'; $('sav-submit').textContent='+ Dodaj cel'; $('sav-cancel').hidden=true; }
   function resetDebtForm(){ $('debt-form').reset(); editingDebtId=''; $('debt-form-title').textContent='Dodaj zadłużenie'; $('debt-submit').textContent='+ Dodaj zadłużenie'; $('debt-cancel').hidden=true; }
   $('budget-form').addEventListener('submit',e=>{
     e.preventDefault(); transactions.push({id:Date.now(),date:$('bud-date').value,type:$('bud-type').value,name:$('bud-name').value.trim(),category:$('bud-category').value,amount:+$('bud-amount').value,balanceEffect:$('bud-date').value>String(budgetSettings.openingDate||today)||Date.now()>Number(budgetSettings.updatedAt||0)});
@@ -2000,8 +2005,8 @@ window.addEventListener('hashchange', function () {
     e.preventDefault(); const category=$('sav-category').value.trim(); const item={id:editingSavingsId||Date.now(),name:$('sav-name').value.trim(),category,target:+$('sav-target').value,current:0,monthly:+$('sav-monthly').value||0};
     if(!category){alert('Podaj nazwę wspólnej puli.');return;}
     const existingPool=getPool(category);
-    if(!editingSavingsId && !existingPool){savingsPools.push({id:'pool-'+Date.now(),name:category,balance:Math.max(0,+$('sav-current').value||0)});}
-    if(editingSavingsId){const old=savingsGoals.find(x=>String(x.id)===String(editingSavingsId));if(old && poolKey(old.category||old.name)!==poolKey(category) && !existingPool){savingsPools.push({id:'pool-'+Date.now(),name:category,balance:0});} savingsGoals=savingsGoals.map(x=>String(x.id)===String(editingSavingsId)?item:x);} else savingsGoals.push(item);
+    if(!editingSavingsId && !existingPool){const cash=Math.max(0,+$('sav-current-cash').value||0), account=Math.max(0,+$('sav-current-account').value||0);savingsPools.push({id:'pool-'+Date.now(),name:category,cashBalance:cash,accountBalance:account,balance:Math.round((cash+account)*100)/100});}
+    if(editingSavingsId){const old=savingsGoals.find(x=>String(x.id)===String(editingSavingsId));if(old && poolKey(old.category||old.name)!==poolKey(category) && !existingPool){savingsPools.push({id:'pool-'+Date.now(),name:category,cashBalance:0,accountBalance:0,balance:0});} savingsGoals=savingsGoals.map(x=>String(x.id)===String(editingSavingsId)?item:x);} else savingsGoals.push(item);
     saveSavings(); resetSavingsForm(); renderBudget();
   });
   $('debt-form').addEventListener('submit',e=>{
@@ -2020,16 +2025,21 @@ window.addEventListener('hashchange', function () {
   $('savings-list').addEventListener('click',e=>{
     const del=e.target.closest('[data-sav-delete]'); if(del){savingsGoals=savingsGoals.filter(x=>String(x.id)!==del.dataset.savDelete);saveSavings();renderBudget();return;}
     const edit=e.target.closest('[data-sav-edit]'); if(!edit)return; const x=savingsGoals.find(v=>String(v.id)===edit.dataset.savEdit);if(!x)return;
-    editingSavingsId=x.id;$('sav-name').value=x.name;$('sav-category').value=x.category||x.name;$('sav-target').value=x.target;$('sav-current').value='0';$('sav-current').disabled=true;$('sav-monthly').value=x.monthly||'';$('savings-form-title').textContent='Edytuj cel oszczędnościowy';$('sav-submit').textContent='Zapisz zmiany';$('sav-cancel').hidden=false;$('savings-form').scrollIntoView({behavior:'smooth',block:'center'});
+    editingSavingsId=x.id;$('sav-name').value=x.name;$('sav-category').value=x.category||x.name;$('sav-target').value=x.target;$('sav-current-cash').value='0';$('sav-current-account').value='0';$('sav-current-cash').disabled=true;$('sav-current-account').disabled=true;$('sav-monthly').value=x.monthly||'';$('savings-form-title').textContent='Edytuj cel oszczędnościowy';$('sav-submit').textContent='Zapisz zmiany';$('sav-cancel').hidden=false;$('savings-form').scrollIntoView({behavior:'smooth',block:'center'});
   });
   $('savings-list').addEventListener('click',e=>{
-    const add=e.target.closest('[data-pool-add]'), take=e.target.closest('[data-pool-take]'); if(!add&&!take)return;
-    const name=(add||take).dataset.poolAdd || (add||take).dataset.poolTake; const pool=getPool(name); if(!pool)return;
-    const raw=prompt((add?'Wpłata do puli „':'Wypłata z puli „')+name+'” — podaj kwotę w zł:'); if(raw===null)return;
-    const amount=Number(String(raw).replace(',','.')); if(!Number.isFinite(amount)||amount<=0){alert('Podaj prawidłową kwotę większą od zera.');return;}
-    if(take && amount>(+pool.balance||0)){alert('Nie można wypłacić więcej, niż znajduje się we wspólnej puli.');return;}
-    pool.balance=Math.round(((+pool.balance||0)+(add?amount:-amount))*100)/100;
-    transactions.push({id:Date.now()+Math.random(),date:today,type:add?'expense':'income',name:(add?'Wpłata do puli: ':'Wypłata z puli: ')+name,category:'Oszczędności',amount,balanceEffect:true,poolName:name});
+    const button=e.target.closest('[data-pool-add-cash],[data-pool-add-account],[data-pool-take-cash],[data-pool-take-account]'); if(!button)return;
+    const key=Object.keys(button.dataset).find(k=>['poolAddCash','poolAddAccount','poolTakeCash','poolTakeAccount'].includes(k));
+    const name=button.dataset[key]; const pool=getPool(name); if(!pool)return; normalizePool(pool);
+    const isCash=key.toLowerCase().includes('cash'), isAdd=key.toLowerCase().includes('add');
+    const label=isCash?'gotówce':'na koncie';
+    const raw=prompt((isAdd?'Wpłata w ':'Wypłata z ')+label+' — '+name+' (zł):'); if(raw===null)return;
+    const amount=Math.round(Number(String(raw).replace(',','.'))*100)/100;
+    if(!Number.isFinite(amount)||amount<=0){alert('Podaj prawidłową kwotę większą od zera.');return;}
+    const field=isCash?'cashBalance':'accountBalance';
+    if(!isAdd && amount>(+pool[field]||0)){alert('Nie można wypłacić więcej, niż znajduje się '+(isCash?'w gotówce.':'na koncie.'));return;}
+    pool[field]=Math.round(((+pool[field]||0)+(isAdd?amount:-amount))*100)/100; pool.balance=poolTotal(pool);
+    transactions.push({id:Date.now()+Math.random(),date:today,type:isAdd?'expense':'income',name:(isAdd?'Wpłata ':'Wypłata ')+(isCash?'gotówkowa: ':'na konto: ')+name,category:'Oszczędności',amount,balanceEffect:true,poolName:name,paymentMethod:isCash?'cash':'account'});
     write('transactions','life-tracker-budget-v1',transactions);saveSavings();renderBudget();
   });
   $('debts-list').addEventListener('click',e=>{
