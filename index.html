@@ -327,6 +327,28 @@ body { background-color:#101412; color:#e7eee9; }
   #panel-fitness .fit-event { font-size:8px !important; -webkit-line-clamp:3 !important; }
 }
 </style>
+<style>
+/* ---------- FITNESS activity details ---------- */
+.fit-detail-btn { margin-top:5px; border:0; background:none; color:#4bc59b; cursor:pointer; font-size:12px; text-decoration:underline; }
+.fit-detail-overlay { position:fixed; inset:0; z-index:1000; display:flex; align-items:center; justify-content:center; padding:18px; background:rgba(0,0,0,.72); }
+.fit-detail-overlay[hidden] { display:none !important; }
+.fit-detail-dialog { width:min(820px,100%); max-height:min(90vh,900px); overflow:auto; background:#171f1b; color:#e7eee9; border:1px solid #3a4940; border-radius:16px; padding:20px; box-shadow:0 24px 80px rgba(0,0,0,.45); }
+.fit-detail-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:16px; }
+.fit-detail-head h2 { margin:0 0 5px; font-size:22px; }
+.fit-detail-close { flex:0 0 auto; width:38px; height:38px; border:1px solid #35413a; border-radius:9px; background:#202923; color:#e7eee9; cursor:pointer; font-size:22px; }
+.fit-detail-section { margin-top:14px; padding:15px; border:1px solid #2b3931; border-radius:12px; background:#101713; }
+.fit-detail-section h3 { margin:0 0 12px; font-size:14px; color:#c7d2cb; }
+.fit-detail-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
+.fit-detail-stat { min-width:0; padding:11px; border:1px solid #2b3430; border-radius:9px; background:#181e1b; }
+.fit-detail-stat span { display:block; color:#9aa8a0; font-size:11px; margin-bottom:5px; }
+.fit-detail-stat strong { display:block; font-size:18px; overflow-wrap:anywhere; }
+.fit-detail-chart { width:100%; height:auto; display:block; overflow:visible; }
+.fit-detail-chart text { fill:#9aa8a0; font-size:10px; }
+.fit-detail-empty { color:#9aa8a0; font-size:13px; }
+.fit-detail-tags { display:flex; flex-wrap:wrap; gap:7px; }
+.fit-detail-tags span { border:1px solid #35413a; border-radius:8px; padding:6px 9px; color:#d5e0d8; font-size:12px; }
+@media(max-width:600px) { .fit-detail-overlay { padding:8px; align-items:flex-end; } .fit-detail-dialog { max-height:92vh; padding:14px; border-radius:15px 15px 10px 10px; } .fit-detail-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .fit-detail-head h2 { font-size:19px; } }
+</style>
 </head><body>
 <title>Karta nawyków</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -624,6 +646,11 @@ details.tbl .tw { overflow-x: auto; }
       <div class="section-title"><h2>Historia treningów</h2><span class="muted small">Najnowsze na górze</span></div>
       <div id="fitness-list" class="entry-list"><p class="muted">Nie dodano jeszcze treningów.</p></div>
     </article>
+    <div id="fit-detail-overlay" class="fit-detail-overlay" hidden aria-hidden="true">
+      <section class="fit-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="fit-detail-title">
+        <div id="fit-detail-content"></div>
+      </section>
+    </div>
   </div>
 </section>
 
@@ -1433,9 +1460,105 @@ window.addEventListener('hashchange', function () {
     const mins = workouts.reduce((a,x)=>a+(+x.duration||0),0);
     $('fit-time').textContent = (mins/60).toLocaleString('pl-PL',{maximumFractionDigits:1})+' h';
     $('fitness-list').innerHTML = workouts.length ? workouts.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(x=>`
-      <div class="entry"><div class="entry-main"><strong>${esc(x.name)}</strong><div class="entry-meta">${esc(x.date)} · ${esc(x.type)}${x.notes?' · '+esc(x.notes):''}</div></div><div class="entry-side"><strong>${x.distance?esc(x.distance)+' km':''}${x.duration?' · '+esc(x.duration)+' min':''}</strong><button data-fit-edit="${x.id}">Edytuj</button> <button data-fit-delete="${x.id}">Usuń</button></div></div>`).join('') : '<p class="muted">Nie dodano jeszcze treningów.</p>';
+      <div class="entry"><div class="entry-main"><strong>${esc(x.name)}</strong><div class="entry-meta">${esc(x.date)} · ${esc(x.type)}${x.notes?' · '+esc(x.notes):''}</div><button class="fit-detail-btn" data-fit-details="${esc(x.id)}">Szczegóły treningu</button></div><div class="entry-side"><strong>${x.distance?esc(x.distance)+' km':''}${x.duration?' · '+esc(x.duration)+' min':''}</strong><button data-fit-edit="${esc(x.id)}">Edytuj</button> <button data-fit-delete="${esc(x.id)}">Usuń</button></div></div>`).join('') : '<p class="muted">Nie dodano jeszcze treningów.</p>';
     renderFitnessCalendar();
   }
+  function fmtMetric(value, unit, digits=1) {
+    if (value === undefined || value === null || value === '' || !Number.isFinite(Number(value))) return '—';
+    return Number(value).toLocaleString('pl-PL',{maximumFractionDigits:digits}) + (unit ? ' '+unit : '');
+  }
+  function fitSources(fit) {
+    return [fit || {}, fit?.summary || {}, fit?.stats || {}, fit?.metrics || {}, fit?.activity || {}, fit?.session || {}];
+  }
+  function pickMetric(sources, keys) {
+    for (const source of sources) for (const key of keys) {
+      if (source && source[key] !== undefined && source[key] !== null && source[key] !== '') return source[key];
+    }
+    return null;
+  }
+  function hrSamples(fit) {
+    const raw = fit?.heartRateSamples || fit?.heart_rate_samples || fit?.samples || [];
+    if (!Array.isArray(raw)) return [];
+    return raw.map((v,i)=>{
+      if (typeof v === 'number') return {hr:v, time:null};
+      if (!v || typeof v !== 'object') return null;
+      const hr = Number(v.heartRate ?? v.heart_rate ?? v.hr ?? v.value);
+      if (!Number.isFinite(hr) || hr <= 0) return null;
+      const time = v.timestamp ?? v.time ?? v.elapsedTime ?? v.elapsed_time ?? v.seconds ?? null;
+      return {hr, time};
+    }).filter(Boolean);
+  }
+  function timeLabel(v, first) {
+    let sec = Number(v);
+    if (typeof v === 'string' && !/^\d+(\.\d+)?$/.test(v)) {
+      const d = new Date(v); if (!Number.isNaN(d.getTime())) sec = (d.getTime()-first)/1000;
+    }
+    if (!Number.isFinite(sec)) return '';
+    if (sec > 1e12) sec = (sec-first)/1000;
+    if (sec > 1e9) return '';
+    sec = Math.max(0,sec);
+    return Math.floor(sec/60)+':'+String(Math.floor(sec%60)).padStart(2,'0');
+  }
+  function hrChart(samples) {
+    if (samples.length < 2) return '<p class="fit-detail-empty">Brak wystarczających próbek tętna do narysowania wykresu.</p>';
+    const vals=samples.map(x=>x.hr), min=Math.min(...vals), max=Math.max(...vals), lo=Math.max(0,min-8), hi=max+8;
+    const W=740,H=230,L=42,R=12,T=14,B=32, plotW=W-L-R, plotH=H-T-B;
+    const pts=samples.map((x,i)=>`${(L+(i/(samples.length-1))*plotW).toFixed(1)},${(T+(1-(x.hr-lo)/(hi-lo||1))*plotH).toFixed(1)}`).join(' ');
+    const yTicks=[lo,Math.round((lo+hi)/2),hi];
+    const grid=yTicks.map(v=>{const y=T+(1-(v-lo)/(hi-lo||1))*plotH;return `<line x1="${L}" y1="${y}" x2="${W-R}" y2="${y}" stroke="#2b3931" stroke-width="1"/><text x="${L-8}" y="${y+3}" text-anchor="end">${Math.round(v)}</text>`}).join('');
+    const rawTimes=samples.map(x=>x.time);
+    const hasTimes=rawTimes.every(v=>v!==null && v!==undefined);
+    let elapsed=[];
+    if(hasTimes){
+      const numeric=rawTimes.map(v=>{ if(typeof v==='string' && !/^\d+(\.\d+)?$/.test(v)){const d=new Date(v);return Number.isNaN(d.getTime())?NaN:d.getTime();} return Number(v); });
+      if(numeric.every(Number.isFinite)){
+        const epoch=numeric[0]>1e12 || numeric[0]>1e9 && numeric[0]<1e12;
+        elapsed=numeric.map(v=>epoch?(v-numeric[0])/(numeric[0]>1e12?1000:1):v-numeric[0]);
+      }
+    }
+    const xLabels=[0,Math.floor((samples.length-1)/2),samples.length-1].map((i,j)=>{
+      let label=j===0?'Start':j===2?'Koniec':Math.round((i/(samples.length-1))*100)+'%';
+      if(elapsed.length && Number.isFinite(elapsed[i])) {const sec=Math.max(0,Math.round(elapsed[i]));label=Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');}
+      return `<text x="${L+(i/(samples.length-1))*plotW}" y="${H-7}" text-anchor="${j===0?'start':j===2?'end':'middle'}">${label}</text>`;
+    }).join('');
+    return `<svg class="fit-detail-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Wykres tętna z ${samples.length} próbek">${grid}<polyline points="${pts}" fill="none" stroke="#4bc59b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${xLabels}</svg>`;
+  }
+  function openWorkoutDetails(id) {
+    const x=workouts.find(w=>String(w.id)===String(id)); if(!x) return;
+    const fit=x.garminFit || null, hr=fit?.heartRate || {}, samples=hrSamples(fit), src=fitSources(fit);
+    const avg=hr.average ?? pickMetric(src,['averageHeartRate','avgHeartRate','avg_heart_rate']);
+    const max=hr.maximum ?? pickMetric(src,['maximumHeartRate','maxHeartRate','max_heart_rate']);
+    const min=hr.minimum ?? pickMetric(src,['minimumHeartRate','minHeartRate','min_heart_rate']);
+    const metrics=[
+      ['Kalorie',x.calories ?? pickMetric(src,['totalCalories','calories']),'kcal'],
+      ['Średnia prędkość',pickMetric(src,['averageSpeed','avgSpeed','average_speed']),'km/h'],
+      ['Maks. prędkość',pickMetric(src,['maxSpeed','maximumSpeed','max_speed']),'km/h'],
+      ['Średnie tempo',pickMetric(src,['averagePace','avgPace','average_pace']),''],
+      ['Kadencja',pickMetric(src,['averageRunCadence','averageCadence','avgCadence','average_cadence']),'spm'],
+      ['Moc średnia',pickMetric(src,['averagePower','avgPower','average_power']),'W'],
+      ['Moc maks.',pickMetric(src,['maxPower','maximumPower','max_power']),'W'],
+      ['Przewyższenie +',pickMetric(src,['totalAscent','elevationGain','total_elevation_gain']),'m'],
+      ['Przewyższenie −',pickMetric(src,['totalDescent','elevationLoss','total_elevation_loss']),'m']
+    ].filter(v=>v[1]!==null && v[1]!==undefined && v[1]!=='');
+    const status=fit?.success ? 'Dane FIT zapisane' : x.garminFitStatus==='error' ? 'Błąd pobierania FIT' : x.garminActivityId ? 'Oczekuje na dane FIT' : 'Trening dodany ręcznie';
+    const extra=metrics.length ? `<div class="fit-detail-grid">${metrics.map(m=>`<div class="fit-detail-stat"><span>${esc(m[0])}</span><strong>${fmtMetric(m[1],m[2],m[0].includes('tempo')?2:1)}</strong></div>`).join('')}</div>` : '<p class="fit-detail-empty">Brak dodatkowych parametrów w danych FIT dla tej aktywności.</p>';
+    $('fit-detail-content').innerHTML=`<div class="fit-detail-head"><div><h2 id="fit-detail-title">${esc(x.name || 'Trening')}</h2><p class="muted small">${esc(x.date)} · ${esc(x.type)} · ${esc(status)}</p></div><button class="fit-detail-close" type="button" data-fit-detail-close aria-label="Zamknij">×</button></div>
+      <section class="fit-detail-section"><h3>Podstawowe informacje</h3><div class="fit-detail-grid">
+        <div class="fit-detail-stat"><span>Czas</span><strong>${fmtMetric(x.duration,'min',0)}</strong></div>
+        <div class="fit-detail-stat"><span>Dystans</span><strong>${fmtMetric(x.distance,'km',2)}</strong></div>
+        <div class="fit-detail-stat"><span>Kalorie</span><strong>${fmtMetric(x.calories,'kcal',0)}</strong></div>
+      </div></section>
+      <section class="fit-detail-section"><h3>Tętno</h3><div class="fit-detail-grid">
+        <div class="fit-detail-stat"><span>Średnie</span><strong>${fmtMetric(avg,'bpm',0)}</strong></div>
+        <div class="fit-detail-stat"><span>Maksymalne</span><strong>${fmtMetric(max,'bpm',0)}</strong></div>
+        <div class="fit-detail-stat"><span>Minimalne</span><strong>${fmtMetric(min,'bpm',0)}</strong></div>
+      </div><div style="margin-top:14px">${hrChart(samples)}</div><p class="muted small">Próbki tętna: ${samples.length || hr.sampleCount || 0}</p></section>
+      <section class="fit-detail-section"><h3>Pozostałe parametry</h3>${extra}</section>
+      ${x.notes?`<section class="fit-detail-section"><h3>Notatki</h3><p>${esc(x.notes)}</p></section>`:''}`;
+    const overlay=$('fit-detail-overlay'); overlay.hidden=false; overlay.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden';
+    const close=overlay.querySelector('[data-fit-detail-close]'); if(close) close.focus();
+  }
+  function closeWorkoutDetails() { const overlay=$('fit-detail-overlay'); if(!overlay) return; overlay.hidden=true; overlay.setAttribute('aria-hidden','true'); document.body.style.overflow=''; }
   function renderFitnessCalendar(){
     const month=$('fit-month').value || today.slice(0,7);
     const parts=month.split('-').map(Number), year=parts[0], mon=parts[1];
@@ -1477,16 +1600,20 @@ window.addEventListener('hashchange', function () {
   $('fitness-form').addEventListener('submit',e=>{
     e.preventDefault();
     const id=$('fit-edit-id').value;
-    const item={id:id||Date.now(),date:$('fit-date').value,type:$('fit-type').value,name:$('fit-name').value.trim(),calendarDetail:$('fit-calendar-detail').value.trim(),distance:$('fit-distance').value,duration:$('fit-duration').value,notes:$('fit-notes').value.trim()};
+    const previous=id ? workouts.find(x=>String(x.id)===String(id)) : null;
+    const item={...(previous||{}),id:id||Date.now(),date:$('fit-date').value,type:$('fit-type').value,name:$('fit-name').value.trim(),calendarDetail:$('fit-calendar-detail').value.trim(),distance:$('fit-distance').value,duration:$('fit-duration').value,notes:$('fit-notes').value.trim()};
     if(id) workouts=workouts.map(x=>String(x.id)===String(id)?item:x); else workouts.push(item);
     write('workouts','life-tracker-fitness-v1',workouts); resetFitnessForm(); renderFitness();
   });
   $('fit-cancel-edit').addEventListener('click',resetFitnessForm);
   $('fitness-list').addEventListener('click',e=>{
+    const details=e.target.closest('[data-fit-details]'); if(details){openWorkoutDetails(details.dataset.fitDetails);return;}
     const edit=e.target.closest('[data-fit-edit]'); if(edit){editFitness(edit.dataset.fitEdit);return;}
     const b=e.target.closest('[data-fit-delete]'); if(!b)return;
     workouts=workouts.filter(x=>String(x.id)!==b.dataset.fitDelete); write('workouts','life-tracker-fitness-v1',workouts); renderFitness();
   });
+  $('fit-detail-overlay').addEventListener('click',e=>{if(e.target.id==='fit-detail-overlay'||e.target.closest('[data-fit-detail-close]')) closeWorkoutDetails();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape' && !$('fit-detail-overlay').hidden) closeWorkoutDetails();});
   $('fit-calendar-grid').addEventListener('click',e=>{
     const edit=e.target.closest('[data-fit-edit]'); if(edit){e.stopPropagation();editFitness(edit.dataset.fitEdit);return;}
     const day=e.target.closest('[data-fit-day]'); if(!day)return;
@@ -1707,350 +1834,125 @@ if (garminButton) {
       garminStatus.textContent = 'Nie udało się uruchomić klienta Supabase.';
       return;
     }
-
     garminButton.disabled = true;
     garminButton.textContent = 'Łączenie…';
     garminStatus.textContent = 'Pobieram aktywności i dane treningowe z Garmina…';
     garminResults.hidden = true;
     garminResults.textContent = '';
-
     try {
-      const { data: sessionData, error: sessionError } =
-        await client.auth.getSession();
-
+      const { data: sessionData, error: sessionError } = await client.auth.getSession();
       if (sessionError) throw sessionError;
-
       if (!sessionData.session) {
-        garminStatus.textContent =
-          'Najpierw zaloguj się do LifeTrackera.';
+        garminStatus.textContent = 'Najpierw zaloguj się do LifeTrackera.';
         return;
       }
-
       const rootData = localData();
-      const walkingData = Array.isArray(rootData.garminWalking)
-        ? rootData.garminWalking
-        : [];
-
+      const walkingData = Array.isArray(rootData.garminWalking) ? rootData.garminWalking : [];
       const fitnessModule = window.LifeTrackerFitness;
-
-      if (!fitnessModule) {
-        throw new Error(
-          'Moduł FITNESS nie został prawidłowo uruchomiony. Odśwież aplikację.'
-        );
-      }
-
+      if (!fitnessModule) throw new Error('Moduł FITNESS nie został prawidłowo uruchomiony. Odśwież aplikację.');
       const workouts = fitnessModule.getWorkouts();
-
-      // Przekazujemy backendowi ID treningów, które mają już zapisane FIT.
-      // Starsze treningi bez FIT zostaną uzupełnione.
       const knownActivityIds = [];
-
-      workouts.forEach(w => {
-        if (w.garminActivityId != null && w.garminFit?.success) {
-          knownActivityIds.push(String(w.garminActivityId));
-        }
-      });
-
-      walkingData.forEach(w => {
-        if (w.activityId != null) {
-          knownActivityIds.push(String(w.activityId));
-        }
-      });
-
-      const { data, error } = await client.functions.invoke(
-        'garmin-sync',
-        {
-          body: {
-            knownActivityIds: [...new Set(knownActivityIds)]
-          }
-        }
-      );
-
+      workouts.forEach(w => { if (w.garminActivityId != null && w.garminFit?.success) knownActivityIds.push(String(w.garminActivityId)); });
+      walkingData.forEach(w => { if (w.activityId != null) knownActivityIds.push(String(w.activityId)); });
+      const { data, error } = await client.functions.invoke('garmin-sync', { body: { knownActivityIds: [...new Set(knownActivityIds)] } });
       if (error) {
         let details = error.message || 'Nie udało się wywołać funkcji.';
-
         try {
           if (error.context && typeof error.context.json === 'function') {
             const body = await error.context.json();
             details = body.details || body.error || body.message || details;
-
-            if (body.status) {
-              details += ' (HTTP ' + body.status + ')';
-            }
+            if (body.status) details += ' (HTTP ' + body.status + ')';
           }
         } catch (_) {}
-
         throw new Error(details);
       }
-
-      if (!data || data.error) {
-        throw new Error(
-          data?.error || 'Funkcja zwróciła pustą odpowiedź.'
-        );
-      }
-
-      const list = Array.isArray(data.activities)
-        ? data.activities
-        : (
-            Array.isArray(data.activities?.activities)
-              ? data.activities.activities
-              : []
-          );
-
+      if (!data || data.error) throw new Error(data?.error || 'Funkcja zwróciła pustą odpowiedź.');
+      const list = Array.isArray(data.activities) ? data.activities : (Array.isArray(data.activities?.activities) ? data.activities.activities : []);
       const fitByActivityId = data.fitByActivityId || {};
       const fitErrors = data.fitErrors || {};
-
-      let addedToCalendar = 0;
-      let addedWalking = 0;
-      let updatedWithFit = 0;
-      let skipped = 0;
-      let fitSaved = 0;
-
+      let addedToCalendar = 0, addedWalking = 0, updatedWithFit = 0, skipped = 0, fitSaved = 0;
       const displayLines = [];
-
       list.forEach(a => {
         const id = a.activityId ?? a.activityID ?? a.id;
-        const activityName = String(
-          a.activityName ||
-          a.name ||
-          a.activityType?.typeKey ||
-          'Aktywność'
-        );
-
-        const typeKey = String(
-          a.activityType?.typeKey ||
-          a.activityType?.typeName ||
-          ''
-        ).toLowerCase();
-
+        const activityName = String(a.activityName || a.name || a.activityType?.typeKey || 'Aktywność');
+        const typeKey = String(a.activityType?.typeKey || a.activityType?.typeName || '').toLowerCase();
         const label = (activityName + ' ' + typeKey).toLowerCase();
-
-        const dateRaw =
-          a.startTimeLocal ||
-          a.startTimeGMT ||
-          a.startTime ||
-          '';
-
-        const date = dateRaw
-          ? String(dateRaw).slice(0, 10)
-          : '';
-
-        const distanceKm = Number(a.distance) > 0
-          ? Number(a.distance) / 1000
-          : '';
-
-        const durationMin = Number(a.duration) > 0
-          ? Number(a.duration) / 60
-          : '';
-
+        const dateRaw = a.startTimeLocal || a.startTimeGMT || a.startTime || '';
+        const date = dateRaw ? String(dateRaw).slice(0,10) : '';
+        const distanceKm = Number(a.distance) > 0 ? Number(a.distance) / 1000 : '';
+        const durationMin = Number(a.duration) > 0 ? Number(a.duration) / 60 : '';
         const calories = Number(a.calories) || 0;
-
-        const isWalk =
-          /walking|hiking|walk|piesze|w[eę]dr[oó]wk|chodzenie/.test(label);
-
-        const isRun =
-          /running|run|bieganie|bieg/.test(label);
-
-        const isBike =
-          /cycling|biking|bike|rower/.test(label);
-
-        const isStrength =
-          /strength|training|si[lł]a|si[lł]owy|weight.?training/.test(label);
-
-        const uniqueId = id != null
-          ? String(id)
-          : activityName + '|' + dateRaw;
-
+        const isWalk = /walking|hiking|walk|piesze|w[eę]dr[oó]wk|chodzenie/.test(label);
+        const isRun = /running|run|bieganie|bieg/.test(label);
+        const isBike = /cycling|biking|bike|rower/.test(label);
+        const isStrength = /strength|training|si[lł]a|si[lł]owy|weight.?training/.test(label);
+        const uniqueId = id != null ? String(id) : activityName + '|' + dateRaw;
         const fitDetails = fitByActivityId[uniqueId] || null;
         const fitError = fitErrors[uniqueId] || null;
-
-        // Sprawdzamy, czy trening istnieje już w kalendarzu.
-        const existingWorkout = workouts.find(
-          w => String(w.garminActivityId) === uniqueId
-        );
-
+        const existingWorkout = workouts.find(w => String(w.garminActivityId) === uniqueId);
         if (existingWorkout) {
-          // Uzupełniamy istniejący trening danymi FIT, bez duplikowania.
           if (fitDetails?.success && !existingWorkout.garminFit?.success) {
             existingWorkout.garminFit = fitDetails;
             existingWorkout.garminFitStatus = 'ready';
             existingWorkout.garminFitError = null;
-            updatedWithFit++;
-            fitSaved++;
-            displayLines.push(
-              'Uzupełniono dane FIT: ' + existingWorkout.name
-            );
+            updatedWithFit++; fitSaved++;
+            displayLines.push('Uzupełniono dane FIT: ' + existingWorkout.name);
           }
-
-          skipped++;
-          return;
+          skipped++; return;
         }
-
-        // Spacery zapisujemy osobno.
-        const existingWalk = walkingData.some(
-          w => String(w.activityId) === uniqueId
-        );
-
+        const existingWalk = walkingData.some(w => String(w.activityId) === uniqueId);
         if (isWalk) {
-          if (existingWalk) {
-            skipped++;
-            return;
-          }
-
-          walkingData.push({
-            activityId: id ?? uniqueId,
-            name: activityName,
-            date,
-            startTime: dateRaw,
-            distanceKm,
-            durationMin,
-            calories,
-            source: 'Garmin'
-          });
-
+          if (existingWalk) { skipped++; return; }
+          walkingData.push({ activityId: id ?? uniqueId, name: activityName, date, startTime: dateRaw, distanceKm, durationMin, calories, source: 'Garmin' });
           addedWalking++;
-
-          displayLines.push(
-            'Spacer: ' + activityName + ' · ' + date
-          );
-
+          displayLines.push('Spacer: ' + activityName + ' · ' + date);
           return;
         }
-
         let fitType = '';
-
-        if (isRun) fitType = 'Bieganie';
-        else if (isBike) fitType = 'Rower';
-        else if (isStrength) fitType = 'Trening siłowy';
-
+        if (isRun) fitType = 'Bieganie'; else if (isBike) fitType = 'Rower'; else if (isStrength) fitType = 'Trening siłowy';
         if (!fitType || !date) return;
-
         const workout = {
-          id: 'garmin-' + uniqueId,
-          garminActivityId: id ?? uniqueId,
-
-          date,
-          type: fitType,
-          name: activityName,
-
-          calendarDetail: '',
-
-          distance: distanceKm === ''
-            ? ''
-            : String(Number(distanceKm.toFixed(2))),
-
-          duration: durationMin === ''
-            ? ''
-            : String(Number(durationMin.toFixed(1))),
-
-          calories,
-
-          notes: 'Import Garmin',
-
-          garminFit: fitDetails,
-          garminFitStatus: fitDetails?.success
-            ? 'ready'
-            : fitError
-              ? 'error'
-              : 'pending',
-
-          garminFitError: fitError
+          id: 'garmin-' + uniqueId, garminActivityId: id ?? uniqueId, date, type: fitType, name: activityName,
+          calendarDetail: '', distance: distanceKm === '' ? '' : String(Number(distanceKm.toFixed(2))),
+          duration: durationMin === '' ? '' : String(Number(durationMin.toFixed(1))), calories, notes: 'Import Garmin',
+          garminFit: fitDetails, garminFitStatus: fitDetails?.success ? 'ready' : fitError ? 'error' : 'pending', garminFitError: fitError
         };
-
-        workouts.push(workout);
-
-        addedToCalendar++;
-
-        if (fitDetails?.success) {
-          fitSaved++;
-        }
-
-        displayLines.push(
-          'Dodano do FITNESS: ' +
-          fitType +
-          ' · ' +
-          date +
-          (fitDetails?.success ? ' · dane FIT zapisane' : '')
-        );
+        workouts.push(workout); addedToCalendar++;
+        if (fitDetails?.success) fitSaved++;
+        displayLines.push('Dodano do FITNESS: ' + fitType + ' · ' + date + (fitDetails?.success ? ' · dane FIT zapisane' : ''));
       });
-
-      // Zapisujemy dane FITNESS i pozostałe dane Garmina.
-      if (addedToCalendar || updatedWithFit) {
-        fitnessModule.setWorkouts(workouts);
-      }
-
-      rootData.workouts = workouts;
-      rootData.garminWalking = walkingData;
-      rootData.updatedAt = new Date().toISOString();
-
-      localStorage.setItem(
-        STORE_KEY,
-        JSON.stringify(rootData)
-      );
-
+      if (addedToCalendar || updatedWithFit) fitnessModule.setWorkouts(workouts);
+      rootData.workouts = workouts; rootData.garminWalking = walkingData; rootData.updatedAt = new Date().toISOString();
+      localStorage.setItem(STORE_KEY, JSON.stringify(rootData));
       scheduleUpload();
-
       const syncInfo = data.syncInfo || {};
-
-      garminStatus.textContent =
-        'Synchronizacja zakończona. ' +
-        'Nowe treningi: ' + addedToCalendar +
-        '. Uzupełnione treningi: ' + updatedWithFit +
-        '. Spacery: ' + addedWalking +
-        '. Zapisane dane FIT: ' + fitSaved +
-        '. Pominięte: ' + skipped + '.';
-
-      let summary = displayLines.length
-        ? displayLines.join('\n')
-        : 'Nie znaleziono nowych aktywności wymagających importu.';
-
-      summary +=
-        '\n\nPODSUMOWANIE SYNCHRONIZACJI\n' +
-        'Aktywności pobrane: ' +
-        (syncInfo.activitiesReceived ?? list.length) +
-        '\nPobrane pliki FIT: ' +
-        (syncInfo.downloadedFitCount ?? 0) +
-        '\nAktywności z już zapisanym FIT: ' +
-        (syncInfo.skippedKnownCount ?? 0) +
-        '\nZapisane zestawy danych FIT: ' +
-        fitSaved;
-
+      garminStatus.textContent = 'Synchronizacja zakończona. Nowe treningi: ' + addedToCalendar + '. Uzupełnione treningi: ' + updatedWithFit + '. Spacery: ' + addedWalking + '. Zapisane dane FIT: ' + fitSaved + '. Pominięte: ' + skipped + '.';
+      let summary = displayLines.length ? displayLines.join('\n') : 'Nie znaleziono nowych aktywności wymagających importu.';
+      summary += '\n\nPODSUMOWANIE SYNCHRONIZACJI\n' +
+        'Aktywności pobrane: ' + (syncInfo.activitiesReceived ?? list.length) +
+        '\nPobrane pliki FIT: ' + (syncInfo.downloadedFitCount ?? 0) +
+        '\nAktywności z już zapisanym FIT: ' + (syncInfo.skippedKnownCount ?? 0) +
+        '\nZapisane zestawy danych FIT: ' + fitSaved;
       if (Object.keys(fitErrors).length) {
         summary += '\n\nBŁĘDY POBIERANIA FIT\n';
-
-        Object.entries(fitErrors).forEach(([id, message]) => {
-          summary += '\n' + id + ': ' + message;
-        });
+        Object.entries(fitErrors).forEach(([id, message]) => { summary += '\n' + id + ': ' + message; });
       }
-
-      // Pokazujemy przykładowe statystyki tętna.
-      const workoutsWithFit = workouts.filter(
-        w => w.garminFit?.success
-      );
-
+      const workoutsWithFit = workouts.filter(w => w.garminFit?.success);
       if (workoutsWithFit.length) {
         summary += '\n\nDANE TĘTNA Z TRENINGÓW\n';
-
-        workoutsWithFit.slice(0, 5).forEach(w => {
+        workoutsWithFit.slice(0,5).forEach(w => {
           const hr = w.garminFit.heartRate || {};
-
-          summary +=
-            '\n' + w.name + ' (' + w.date + ')' +
+          summary += '\n' + w.name + ' (' + w.date + ')' +
             '\nŚrednie: ' + (hr.average ?? 'brak') + ' bpm' +
             '\nMaksymalne: ' + (hr.maximum ?? 'brak') + ' bpm' +
             '\nMinimalne: ' + (hr.minimum ?? 'brak') + ' bpm' +
             '\nPróbki: ' + (hr.sampleCount ?? 0);
         });
       }
-
       garminResults.textContent = summary;
       garminResults.hidden = false;
-
     } catch (err) {
-      garminStatus.textContent =
-        'Błąd: ' +
-        (err && err.message ? err.message : String(err));
-
+      garminStatus.textContent = 'Błąd: ' + (err && err.message ? err.message : String(err));
     } finally {
       garminButton.disabled = false;
       garminButton.textContent = 'Synchronizuj z Garminem';
