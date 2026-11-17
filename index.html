@@ -338,7 +338,8 @@ details.tbl .tw { overflow-x: auto; }
         <form id="fitness-form" class="form-grid">
           <label>Data<input id="fit-date" type="date" required></label>
           <label>Rodzaj<select id="fit-type"><option>Trening siłowy</option><option>Bieganie</option><option>Rower</option><option>Inne</option></select></label>
-          <label class="wide">Nazwa / rodzaj treningu<input id="fit-name" type="text" placeholder="np. FBW A, Long run, Intervals" required></label>
+          <label class="wide">Nazwa / rodzaj treningu<input id="fit-name" type="text" placeholder="np. FBW A, Long run, Run intervals" required></label>
+          <label class="wide">Dodatkowy opis w kalendarzu (opcjonalnie)<input id="fit-calendar-detail" type="text" maxlength="40" placeholder="np. 6×600, podbiegi, regeneracja"></label>
           <label>Dystans (km)<input id="fit-distance" type="number" min="0" step="0.01" placeholder="np. 8.5"></label>
           <label>Czas (min)<input id="fit-duration" type="number" min="0" step="1" placeholder="np. 45"></label>
           <label class="wide">Notatki<textarea id="fit-notes" rows="2" placeholder="Opcjonalne notatki…"></textarea></label>
@@ -1118,6 +1119,12 @@ window.addEventListener('hashchange', function () {
     return 'other';
   }
   function monthKey(date){ return String(date||'').slice(0,7); }
+  function fitCalendarLabel(x){
+    const parts=[x.name];
+    if(x.distance && Number(x.distance)>0) parts.push(Number(x.distance).toLocaleString('pl-PL',{maximumFractionDigits:2})+' km');
+    if(x.calendarDetail && x.calendarDetail.trim()) parts.push(x.calendarDetail.trim());
+    return parts.join(' · ');
+  }
   function renderFitness(){
     $('fit-total').textContent = workouts.length;
     $('fit-km').textContent = workouts.filter(x=>x.type==='Bieganie').reduce((a,x)=>a+(+x.distance||0),0).toLocaleString('pl-PL',{maximumFractionDigits:2})+' km';
@@ -1147,7 +1154,7 @@ window.addEventListener('hashchange', function () {
       const key=date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0');
       const entries=byDate[key]||[];
       const todayClass=key===today?' today':'';
-      html+=`<button type="button" class="fit-day${outside?' outside':''}${todayClass}" data-fit-day="${key}"><span class="fit-day-num">${day}</span>${entries.slice(0,2).map(x=>`<span class="fit-event ${fitClass(x.type)}" data-fit-edit="${x.id}" title="${esc(x.name)}">${esc(x.name)}</span>`).join('')}${entries.length>2?`<span class="fit-day-more">+${entries.length-2} więcej</span>`:''}</button>`;
+      html+=`<button type="button" class="fit-day${outside?' outside':''}${todayClass}" data-fit-day="${key}"><span class="fit-day-num">${day}</span>${entries.slice(0,2).map(x=>`<span class="fit-event ${fitClass(x.type)}" data-fit-edit="${x.id}" title="${esc(fitCalendarLabel(x))}">${esc(fitCalendarLabel(x))}</span>`).join('')}${entries.length>2?`<span class="fit-day-more">+${entries.length-2} więcej</span>`:''}</button>`;
     }
     $('fit-calendar-grid').innerHTML=html;
     const monthWorkouts=workouts.filter(x=>monthKey(x.date)===month);
@@ -1160,14 +1167,14 @@ window.addEventListener('hashchange', function () {
   }
   function editFitness(id){
     const x=workouts.find(w=>String(w.id)===String(id)); if(!x)return;
-    $('fit-edit-id').value=x.id; $('fit-date').value=x.date; $('fit-type').value=x.type; $('fit-name').value=x.name; $('fit-distance').value=x.distance||''; $('fit-duration').value=x.duration||''; $('fit-notes').value=x.notes||'';
+    $('fit-edit-id').value=x.id; $('fit-date').value=x.date; $('fit-type').value=x.type; $('fit-name').value=x.name; $('fit-calendar-detail').value=x.calendarDetail||''; $('fit-distance').value=x.distance||''; $('fit-duration').value=x.duration||''; $('fit-notes').value=x.notes||'';
     $('fit-submit').textContent='Zapisz zmiany'; $('fit-cancel-edit').hidden=false;
     $('fitness-form').scrollIntoView({behavior:'smooth',block:'center'});
   }
   $('fitness-form').addEventListener('submit',e=>{
     e.preventDefault();
     const id=$('fit-edit-id').value;
-    const item={id:id||Date.now(),date:$('fit-date').value,type:$('fit-type').value,name:$('fit-name').value.trim(),distance:$('fit-distance').value,duration:$('fit-duration').value,notes:$('fit-notes').value.trim()};
+    const item={id:id||Date.now(),date:$('fit-date').value,type:$('fit-type').value,name:$('fit-name').value.trim(),calendarDetail:$('fit-calendar-detail').value.trim(),distance:$('fit-distance').value,duration:$('fit-duration').value,notes:$('fit-notes').value.trim()};
     if(id) workouts=workouts.map(x=>String(x.id)===String(id)?item:x); else workouts.push(item);
     write('workouts','life-tracker-fitness-v1',workouts); resetFitnessForm(); renderFitness();
   });
