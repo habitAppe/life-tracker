@@ -262,6 +262,10 @@ body { background-color:#101412; color:#e7eee9; }
   #panel-fitness .fit-event { font-size: 7px; padding: 2px; }
 }
 
+
+/* Budget: temporarily show only savings goals and debts. Transaction/balance tools remain stored but hidden. */
+#panel-budget > .module-wrap > .module-grid:not(.budget-goal-grid),
+#panel-budget > .module-wrap > article.module-card { display:none !important; }
 </style><link rel="manifest" href="/life-tracker/manifest.webmanifest">
 <style id="fitness-calendar-solid-days">
 /* FITNESS calendar: solid activity-colored day cells, including compact mobile labels */
@@ -802,7 +806,7 @@ details.tbl .tw { overflow-x: auto; }
 <nav class="appnav" aria-label="Główne moduły">
   <button class="app-tab active" data-panel="habits">HABITS</button>
   <button class="app-tab" data-panel="fitness">FITNESS</button>
-  <button class="app-tab" data-panel="budget">BUDGET</button>
+  <button class="app-tab" data-panel="budget">FINANSE</button>
   <button class="app-tab" data-panel="work">PRACA</button>
 </nav>
 <section id="cloud-account" aria-label="Konto i synchronizacja" style="max-width:1040px;margin:14px auto;padding:0 16px;">
@@ -894,7 +898,7 @@ details.tbl .tw { overflow-x: auto; }
 <section id="panel-budget" class="module-panel">
   <div class="module-wrap">
     <header class="module-head">
-      <div><p class="eyebrow">PERSONAL FINANCE</p><h1>Budget tracker</h1><p class="muted">Prosty podgląd przychodów, wydatków i oszczędności.</p></div>
+      <div><p class="eyebrow">PERSONAL FINANCE</p><h1>Cele i zadłużenia</h1><p class="muted">Oszczędzanie, postępy celów i kontrola spłat zadłużeń.</p></div>
     </header>
     <div class="module-grid">
       <article class="module-card">
