@@ -1967,10 +1967,30 @@ window.addEventListener('hashchange', function () {
   function parseMoney(v){let x=String(v||'').replace(/\s/g,'').replace(/(PLN|zl)/ig,'').replace(/[^0-9,.-]/g,'');if(x.includes(',')&&x.includes('.'))x=x.lastIndexOf(',')>x.lastIndexOf('.')?x.replace(/\./g,'').replace(',','.'):x.replace(/,/g,'');else x=x.replace(',','.');return Number(x);}
   function parseBankDate(v){v=String(v||'').trim();let m=v.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);if(m)return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;m=v.match(/^(\d{1,2})[/.](\d{1,2})[/.](\d{4})/);if(m)return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;return '';}
   function txFingerprint(x){return [x.date,x.type,Math.round((+x.amount||0)*100),String(x.name||'').toLowerCase().replace(/\s+/g,' ').trim()].join('|');}
+  function categorizeBankTransaction(fields,isIncome){
+    const t=normHead(fields.filter(Boolean).join(' '));
+    if(isIncome){
+      if(/wynagrodzen|pensj|wyplata|lista plac|payroll|salary/.test(t))return 'Wynagrodzenie';
+      return 'Inne';
+    }
+    if(/przelew na twoje cele|twoje cele|oszczednosci|skarbonk|konto oszczednosciow/.test(t))return 'Oszczędności';
+    if(/zabka|zabka|biedronka|lidl|aldi|dino|stokrotka|kaufland|carrefour|auchan|netto|lewiatan|spolem|piekarnia|sklep spozywczy|market/.test(t))return 'Jedzenie';
+    if(/orlen|bp |shell|circle k|moya|stacja paliw|paliwo|benzyn|diesel|uber|bolt|taxi|pkp|polregio|intercity|parking|autostrada/.test(t))return 'Transport / paliwo';
+    if(/pge|energa|enea|tauron|gazown|wodociag|czynsz|administrac|orange|play |t-mobile|plus gsm|internet|netia|vectra|rachunek|prad|energia/.test(t))return 'Rachunki';
+    if(/apteka|farmac|lekar|medic|dentyst|przychod|szpital|diagnost|laboratorium/.test(t))return 'Zdrowie';
+    if(/kino|cinema|netflix|spotify|disney|hbo|steam|playstation|xbox|teatr|koncert|multikino/.test(t))return 'Rozrywka';
+    if(/decathlon|allegro|amazon|rossmann|media markt|mediaexpert|x-kom|ikea|pepco|action|reserved|h&m|zara|zalando/.test(t))return 'Zakupy';
+    return 'Inne';
+  }
   $('bud-import-file').addEventListener('change',async e=>{
     const file=e.target.files&&e.target.files[0];if(!file)return;
     try{
-      let raw=await file.text();raw=raw.replace(/^\uFEFF/,'');
+      // mBank potrafi zapisywać CSV w Windows-1250; najpierw próbujemy UTF-8,
+      // a przy błędzie dekodujemy polskie znaki przez stronę kodową Windows.
+      const buffer=await file.arrayBuffer();let raw;
+      try{raw=new TextDecoder('utf-8',{fatal:true}).decode(buffer);}
+      catch(_){raw=new TextDecoder('windows-1250').decode(buffer);}
+      raw=raw.replace(/^\uFEFF/,'');
       // Eksport mBanku zawiera kilka wierszy informacyjnych przed właściwym nagłówkiem.
       // Ustal separator na podstawie wiersza z nagłówkami, a nie pierwszej linii pliku.
       const lines=raw.split(/\r?\n/);let delim=';';
@@ -1984,16 +2004,20 @@ window.addEventListener('hashchange', function () {
       const find=(tests)=>headers.findIndex(h=>tests.some(t=>h===t||h.includes(t)));
       let di=find(['data operacji','data ksiegowania','data transakcji','data']);
       let ai=find(['kwota','amount','wartosc']);
-      let ni=find(['tytul','opis','nazwa','kontrahent','szczegoly']);
+      const titleIndex=find(['tytul']); const descriptionIndex=find(['opis operacji','opis']);
+      const senderIndex=find(['nadawca/odbiorca','nadawca','odbiorca','kontrahent']);
+      let ni=titleIndex>=0?titleIndex:(descriptionIndex>=0?descriptionIndex:senderIndex);
       let ci=find(['kategoria']); let ti=find(['typ','rodzaj','operacja']);
       if(di<0||ai<0){throw new Error('Nie rozpoznaję kolumn daty i kwoty. Sprawdź, czy to CSV z historią operacji mBanku.');}
       const parsed=[];
       rows.slice(headerIndex+1).forEach(r=>{
         const date=parseBankDate(r[di]);const amountRaw=parseMoney(r[ai]);if(!date||!Number.isFinite(amountRaw)||amountRaw===0)return;
-        const description=(ni>=0?r[ni]:'')||'Transakcja z banku';
+        const description=(ni>=0?r[ni]:'')|| (descriptionIndex>=0?r[descriptionIndex]:'') || (senderIndex>=0?r[senderIndex]:'') || (ti>=0?r[ti]:'') || 'Transakcja z banku';
+        const operation=ti>=0?r[ti]:'';const title=titleIndex>=0?r[titleIndex]:'';const sender=senderIndex>=0?r[senderIndex]:'';
         const typeText=ti>=0?normHead(r[ti]):'';
-        const isIncome=/uznanie|wplyw|przychod|income|wplata/.test(typeText)||amountRaw>0;
-        parsed.push({id:Date.now()+Math.random(),date,type:isIncome?'income':'expense',name:String(description).trim()||'Transakcja z banku',category:ci>=0&&r[ci].trim()?r[ci].trim():(isIncome?'Inne':'Inne'),amount:Math.abs(amountRaw)});
+        const isIncome=/uznanie|wplyw|przychod|income|wplata|wynagrodzen|pensj/.test(typeText)||amountRaw>0;
+        const category=ci>=0&&r[ci]&&r[ci].trim()?r[ci].trim():categorizeBankTransaction([operation,title,sender,description],isIncome);
+        parsed.push({id:Date.now()+Math.random(),date,type:isIncome?'income':'expense',name:String(description).trim()||'Transakcja z banku',category,amount:Math.abs(amountRaw)});
       });
       if(!parsed.length)throw new Error('Nie udało się odczytać żadnych transakcji.');
       const seen=new Set(transactions.map(txFingerprint));const fresh=parsed.filter(x=>{const key=txFingerprint(x);if(seen.has(key))return false;seen.add(key);return true;});
