@@ -1827,6 +1827,40 @@ window.addEventListener('hashchange', function () {
         } else {
           fitSummary = '\n\nTEST PLIKU FIT\nFunkcja nie zwróciła pola fitTest. Sprawdzimy odpowiedź backendu.';
         }
+
+        // Wyniki dekodowania archiwum ZIP i właściwego pliku FIT.
+        const details = data.fitDetails;
+        if (details) {
+          const hr = details.heartRate || {};
+          const samples = Array.isArray(details.heartRateSamples) ? details.heartRateSamples : [];
+          fitSummary += '\n\nODCZYT DANYCH Z PLIKU FIT\n' +
+            'Dekodowanie: ' + (details.success === false ? 'NIEPOWODZENIE' : 'odpowiedź otrzymana') + '\n' +
+            'Rekordy aktywności: ' + (details.recordCount ?? 'brak danych') + '\n' +
+            'Próbki tętna: ' + (hr.sampleCount ?? samples.length ?? 'brak danych') + '\n' +
+            'Średnie tętno: ' + (hr.average ?? 'brak danych') + ' bpm\n' +
+            'Maksymalne tętno: ' + (hr.max ?? 'brak danych') + ' bpm\n' +
+            'Minimalne tętno: ' + (hr.min ?? 'brak danych') + ' bpm';
+          if (details.sessionSummary) {
+            fitSummary += '\nPodsumowanie sesji: ' + JSON.stringify(details.sessionSummary);
+          }
+          if (samples.length) {
+            fitSummary += '\n\nPrzykładowe próbki tętna (maks. 10):\n' +
+              samples.slice(0, 10).map(sample => {
+                if (sample && typeof sample === 'object') {
+                  const time = sample.timestamp || sample.time || '';
+                  const value = sample.heartRate ?? sample.hr ?? sample.value ?? '';
+                  return (time ? time + ' — ' : '') + value + ' bpm';
+                }
+                return String(sample) + ' bpm';
+              }).join('\n');
+          }
+          if (details.error) fitSummary += '\nBłąd dekodowania: ' + details.error;
+          if (Array.isArray(details.errors) && details.errors.length) {
+            fitSummary += '\nUwagi dekodera: ' + details.errors.join('; ');
+          }
+        } else {
+          fitSummary += '\n\nBrak fitDetails w odpowiedzi funkcji. Sprawdzimy konfigurację backendu.';
+        }
         garminResults.textContent = importSummary + fitSummary;
         garminResults.hidden = false;
       } catch (err) {
