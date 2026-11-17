@@ -1696,182 +1696,367 @@ window.addEventListener('hashchange', function () {
   });
 
 
-  // Garmin: testowe pobranie aktywności przez zalogowaną sesję Supabase.
-  const garminButton = document.getElementById('garmin-sync-button');
-  const garminStatus = document.getElementById('garmin-sync-status');
-  const garminResults = document.getElementById('garmin-sync-results');
+  // Garmin: automatyczna synchronizacja aktywności i danych FIT.
+const garminButton = document.getElementById('garmin-sync-button');
+const garminStatus = document.getElementById('garmin-sync-status');
+const garminResults = document.getElementById('garmin-sync-results');
 
-  if (garminButton) {
-    garminButton.addEventListener('click', async function () {
-      if (!client) {
-        garminStatus.textContent = 'Nie udało się uruchomić klienta Supabase.';
+if (garminButton) {
+  garminButton.addEventListener('click', async function () {
+    if (!client) {
+      garminStatus.textContent = 'Nie udało się uruchomić klienta Supabase.';
+      return;
+    }
+
+    garminButton.disabled = true;
+    garminButton.textContent = 'Łączenie…';
+    garminStatus.textContent = 'Pobieram aktywności i dane treningowe z Garmina…';
+    garminResults.hidden = true;
+    garminResults.textContent = '';
+
+    try {
+      const { data: sessionData, error: sessionError } =
+        await client.auth.getSession();
+
+      if (sessionError) throw sessionError;
+
+      if (!sessionData.session) {
+        garminStatus.textContent =
+          'Najpierw zaloguj się do LifeTrackera.';
         return;
       }
 
-      garminButton.disabled = true;
-      garminButton.textContent = 'Łączenie…';
-      garminStatus.textContent = 'Sprawdzam sesję i łączę się z Garminem…';
-      garminResults.hidden = true;
-      garminResults.textContent = '';
+      const rootData = localData();
+      const walkingData = Array.isArray(rootData.garminWalking)
+        ? rootData.garminWalking
+        : [];
 
-      try {
-        const { data: sessionData, error: sessionError } = await client.auth.getSession();
-        if (sessionError) throw sessionError;
-        if (!sessionData.session) {
-          garminStatus.textContent = 'Najpierw zaloguj się do LifeTrackera w sekcji synchronizacji z chmurą.';
+      const fitnessModule = window.LifeTrackerFitness;
+
+      if (!fitnessModule) {
+        throw new Error(
+          'Moduł FITNESS nie został prawidłowo uruchomiony. Odśwież aplikację.'
+        );
+      }
+
+      const workouts = fitnessModule.getWorkouts();
+
+      // Przekazujemy backendowi ID treningów, które mają już zapisane FIT.
+      // Starsze treningi bez FIT zostaną uzupełnione.
+      const knownActivityIds = [];
+
+      workouts.forEach(w => {
+        if (w.garminActivityId != null && w.garminFit?.success) {
+          knownActivityIds.push(String(w.garminActivityId));
+        }
+      });
+
+      walkingData.forEach(w => {
+        if (w.activityId != null) {
+          knownActivityIds.push(String(w.activityId));
+        }
+      });
+
+      const { data, error } = await client.functions.invoke(
+        'garmin-sync',
+        {
+          body: {
+            knownActivityIds: [...new Set(knownActivityIds)]
+          }
+        }
+      );
+
+      if (error) {
+        let details = error.message || 'Nie udało się wywołać funkcji.';
+
+        try {
+          if (error.context && typeof error.context.json === 'function') {
+            const body = await error.context.json();
+            details = body.details || body.error || body.message || details;
+
+            if (body.status) {
+              details += ' (HTTP ' + body.status + ')';
+            }
+          }
+        } catch (_) {}
+
+        throw new Error(details);
+      }
+
+      if (!data || data.error) {
+        throw new Error(
+          data?.error || 'Funkcja zwróciła pustą odpowiedź.'
+        );
+      }
+
+      const list = Array.isArray(data.activities)
+        ? data.activities
+        : (
+            Array.isArray(data.activities?.activities)
+              ? data.activities.activities
+              : []
+          );
+
+      const fitByActivityId = data.fitByActivityId || {};
+      const fitErrors = data.fitErrors || {};
+
+      let addedToCalendar = 0;
+      let addedWalking = 0;
+      let updatedWithFit = 0;
+      let skipped = 0;
+      let fitSaved = 0;
+
+      const displayLines = [];
+
+      list.forEach(a => {
+        const id = a.activityId ?? a.activityID ?? a.id;
+        const activityName = String(
+          a.activityName ||
+          a.name ||
+          a.activityType?.typeKey ||
+          'Aktywność'
+        );
+
+        const typeKey = String(
+          a.activityType?.typeKey ||
+          a.activityType?.typeName ||
+          ''
+        ).toLowerCase();
+
+        const label = (activityName + ' ' + typeKey).toLowerCase();
+
+        const dateRaw =
+          a.startTimeLocal ||
+          a.startTimeGMT ||
+          a.startTime ||
+          '';
+
+        const date = dateRaw
+          ? String(dateRaw).slice(0, 10)
+          : '';
+
+        const distanceKm = Number(a.distance) > 0
+          ? Number(a.distance) / 1000
+          : '';
+
+        const durationMin = Number(a.duration) > 0
+          ? Number(a.duration) / 60
+          : '';
+
+        const calories = Number(a.calories) || 0;
+
+        const isWalk =
+          /walking|hiking|walk|piesze|w[eę]dr[oó]wk|chodzenie/.test(label);
+
+        const isRun =
+          /running|run|bieganie|bieg/.test(label);
+
+        const isBike =
+          /cycling|biking|bike|rower/.test(label);
+
+        const isStrength =
+          /strength|training|si[lł]a|si[lł]owy|weight.?training/.test(label);
+
+        const uniqueId = id != null
+          ? String(id)
+          : activityName + '|' + dateRaw;
+
+        const fitDetails = fitByActivityId[uniqueId] || null;
+        const fitError = fitErrors[uniqueId] || null;
+
+        // Sprawdzamy, czy trening istnieje już w kalendarzu.
+        const existingWorkout = workouts.find(
+          w => String(w.garminActivityId) === uniqueId
+        );
+
+        if (existingWorkout) {
+          // Uzupełniamy istniejący trening danymi FIT, bez duplikowania.
+          if (fitDetails?.success && !existingWorkout.garminFit?.success) {
+            existingWorkout.garminFit = fitDetails;
+            existingWorkout.garminFitStatus = 'ready';
+            existingWorkout.garminFitError = null;
+            updatedWithFit++;
+            fitSaved++;
+            displayLines.push(
+              'Uzupełniono dane FIT: ' + existingWorkout.name
+            );
+          }
+
+          skipped++;
           return;
         }
 
-        const { data, error } = await client.functions.invoke('garmin-sync', {
-          body: { testFit: true, activityId: '24724663945' }
-        });
+        // Spacery zapisujemy osobno.
+        const existingWalk = walkingData.some(
+          w => String(w.activityId) === uniqueId
+        );
 
-        if (error) {
-          let details = error.message || 'Nie udało się wywołać funkcji.';
-          try {
-            if (error.context && typeof error.context.json === 'function') {
-              const body = await error.context.json();
-              details = body.details || body.error || body.message || details;
-              if (body.status) details += ' (HTTP ' + body.status + ')';
-            }
-          } catch (_) {}
-          throw new Error(details);
-        }
-
-        if (!data || data.error) {
-          throw new Error(data && data.error ? data.error : 'Funkcja zwróciła pustą odpowiedź.');
-        }
-
-        const list = Array.isArray(data.activities)
-          ? data.activities
-          : (data.activities && Array.isArray(data.activities.activities) ? data.activities.activities : []);
-
-        // Automatyczny import: bieganie, trening siłowy i rower trafiają do FITNESS.
-        // Aktywności piesze przechowujemy osobno w danych Garmina, bez wpisu w kalendarzu.
-        const rootData = localData();
-        const walkingData = Array.isArray(rootData.garminWalking) ? rootData.garminWalking : [];
-        const fitnessModule = window.LifeTrackerFitness;
-        if (!fitnessModule) throw new Error('Moduł FITNESS nie został prawidłowo uruchomiony. Odśwież aplikację.');
-        const workouts = fitnessModule.getWorkouts();
-        const importedIds = new Set();
-        workouts.forEach(w => { if (w.garminActivityId != null) importedIds.add(String(w.garminActivityId)); });
-        walkingData.forEach(w => { if (w.activityId != null) importedIds.add(String(w.activityId)); });
-        let addedToCalendar = 0, addedWalking = 0, skipped = 0;
-        const displayLines = [];
-
-        list.forEach((a) => {
-          const id = a.activityId ?? a.activityID ?? a.id;
-          const activityName = String(a.activityName || a.name || a.activityType?.typeKey || 'Aktywność');
-          const typeKey = String(a.activityType?.typeKey || a.activityType?.typeName || '').toLowerCase();
-          const label = (activityName + ' ' + typeKey).toLowerCase();
-          const dateRaw = a.startTimeLocal || a.startTimeGMT || a.startTime || '';
-          const date = dateRaw ? String(dateRaw).slice(0, 10) : '';
-          const distanceKm = Number(a.distance) > 0 ? Number(a.distance) / 1000 : '';
-          const durationMin = Number(a.duration) > 0 ? Number(a.duration) / 60 : '';
-          const calories = Number(a.calories) || 0;
-          const isWalk = /walking|hiking|walk|piesze|w[eę]dr[oó]wk|chodzenie/.test(label);
-          const isRun = /running|run|bieganie|bieg/.test(label);
-          const isBike = /cycling|biking|bike|rower|cycling/.test(label);
-          const isStrength = /strength|training|si[lł]a|si[lł]owy|weight.?training/.test(label);
-          const uniqueId = id != null ? String(id) : (activityName + '|' + dateRaw);
-          if (importedIds.has(uniqueId)) { skipped++; return; }
-          const common = { activityId: id ?? uniqueId, name: activityName, date, startTime: dateRaw, distanceKm, durationMin, calories, source: 'Garmin' };
-
-          if (isWalk) {
-            walkingData.push(common);
-            importedIds.add(uniqueId);
-            addedWalking++;
-            displayLines.push('Spacer: ' + activityName + ' · ' + date + ' · ' + (distanceKm ? distanceKm.toFixed(2) + ' km' : 'bez dystansu'));
+        if (isWalk) {
+          if (existingWalk) {
+            skipped++;
             return;
           }
 
-          let fitType = '';
-          if (isRun) fitType = 'Bieganie';
-          else if (isBike) fitType = 'Rower';
-          else if (isStrength) fitType = 'Trening siłowy';
-          if (!fitType || !date) return;
-
-          workouts.push({
-            id: 'garmin-' + uniqueId, garminActivityId: id ?? uniqueId,
-            date, type: fitType, name: activityName,
-            calendarDetail: '', distance: distanceKm === '' ? '' : String(Number(distanceKm.toFixed(2))),
-            duration: durationMin === '' ? '' : String(Number(durationMin.toFixed(1))),
-            calories, notes: 'Import Garmin'
+          walkingData.push({
+            activityId: id ?? uniqueId,
+            name: activityName,
+            date,
+            startTime: dateRaw,
+            distanceKm,
+            durationMin,
+            calories,
+            source: 'Garmin'
           });
-          importedIds.add(uniqueId);
-          addedToCalendar++;
-          displayLines.push('Dodano do FITNESS: ' + fitType + ' · ' + date);
-        });
 
-        if (addedToCalendar) fitnessModule.setWorkouts(workouts);
-        rootData.workouts = workouts;
-        rootData.garminWalking = walkingData;
-        rootData.updatedAt = new Date().toISOString();
-        localStorage.setItem(STORE_KEY, JSON.stringify(rootData));
-        scheduleUpload();
+          addedWalking++;
 
-        garminStatus.textContent = 'Synchronizacja zakończona. Nowe wpisy w FITNESS: ' + addedToCalendar + '. Spacery zapisane osobno: ' + addedWalking + '. Pominięte duplikaty: ' + skipped + '.';
-        const importSummary = displayLines.length ? displayLines.join('\n') : 'Brak nowych aktywności do dodania.';
-        let fitSummary = '';
-        if (data.fitTest) {
-          const fit = data.fitTest;
-          fitSummary = '\n\nTEST PLIKU FIT\n' +
-            'Wynik: ' + (fit.success ? 'OK — pobrano plik' : 'NIEPOWODZENIE') + '\n' +
-            'ID aktywności: ' + (fit.activityId ?? 'brak') + '\n' +
-            'HTTP: ' + (fit.status ?? 'brak') + '\n' +
-            'Typ pliku: ' + (fit.contentType ?? 'brak') + '\n' +
-            'Rozmiar: ' + (fit.contentLength ?? 'brak') + ' bajtów\n' +
-            'Sygnatura: ' + (fit.fileSignature ?? 'brak') + '\n' +
-            'Wygląda jak ZIP: ' + (fit.looksLikeZip === true ? 'tak' : fit.looksLikeZip === false ? 'nie' : 'brak danych');
-          if (fit.error) fitSummary += '\nSzczegóły: ' + fit.error;
-        } else {
-          fitSummary = '\n\nTEST PLIKU FIT\nFunkcja nie zwróciła pola fitTest. Sprawdzimy odpowiedź backendu.';
+          displayLines.push(
+            'Spacer: ' + activityName + ' · ' + date
+          );
+
+          return;
         }
 
-        // Wyniki dekodowania archiwum ZIP i właściwego pliku FIT.
-        const details = data.fitDetails;
-        if (details) {
-          const hr = details.heartRate || {};
-          const samples = Array.isArray(details.heartRateSamples) ? details.heartRateSamples : [];
-          fitSummary += '\n\nODCZYT DANYCH Z PLIKU FIT\n' +
-            'Dekodowanie: ' + (details.success === false ? 'NIEPOWODZENIE' : 'odpowiedź otrzymana') + '\n' +
-            'Rekordy aktywności: ' + (details.recordCount ?? 'brak danych') + '\n' +
-            'Próbki tętna: ' + (hr.sampleCount ?? samples.length ?? 'brak danych') + '\n' +
-            'Średnie tętno: ' + (hr.average ?? 'brak danych') + ' bpm\n' +
-            'Maksymalne tętno: ' + (hr.max ?? 'brak danych') + ' bpm\n' +
-            'Minimalne tętno: ' + (hr.min ?? 'brak danych') + ' bpm';
-          if (details.sessionSummary) {
-            fitSummary += '\nPodsumowanie sesji: ' + JSON.stringify(details.sessionSummary);
-          }
-          if (samples.length) {
-            fitSummary += '\n\nPrzykładowe próbki tętna (maks. 10):\n' +
-              samples.slice(0, 10).map(sample => {
-                if (sample && typeof sample === 'object') {
-                  const time = sample.timestamp || sample.time || '';
-                  const value = sample.heartRate ?? sample.hr ?? sample.value ?? '';
-                  return (time ? time + ' — ' : '') + value + ' bpm';
-                }
-                return String(sample) + ' bpm';
-              }).join('\n');
-          }
-          if (details.error) fitSummary += '\nBłąd dekodowania: ' + details.error;
-          if (Array.isArray(details.errors) && details.errors.length) {
-            fitSummary += '\nUwagi dekodera: ' + details.errors.join('; ');
-          }
-        } else {
-          fitSummary += '\n\nBrak fitDetails w odpowiedzi funkcji. Sprawdzimy konfigurację backendu.';
+        let fitType = '';
+
+        if (isRun) fitType = 'Bieganie';
+        else if (isBike) fitType = 'Rower';
+        else if (isStrength) fitType = 'Trening siłowy';
+
+        if (!fitType || !date) return;
+
+        const workout = {
+          id: 'garmin-' + uniqueId,
+          garminActivityId: id ?? uniqueId,
+
+          date,
+          type: fitType,
+          name: activityName,
+
+          calendarDetail: '',
+
+          distance: distanceKm === ''
+            ? ''
+            : String(Number(distanceKm.toFixed(2))),
+
+          duration: durationMin === ''
+            ? ''
+            : String(Number(durationMin.toFixed(1))),
+
+          calories,
+
+          notes: 'Import Garmin',
+
+          garminFit: fitDetails,
+          garminFitStatus: fitDetails?.success
+            ? 'ready'
+            : fitError
+              ? 'error'
+              : 'pending',
+
+          garminFitError: fitError
+        };
+
+        workouts.push(workout);
+
+        addedToCalendar++;
+
+        if (fitDetails?.success) {
+          fitSaved++;
         }
-        garminResults.textContent = importSummary + fitSummary;
-        garminResults.hidden = false;
-      } catch (err) {
-        garminStatus.textContent = 'Błąd: ' + (err && err.message ? err.message : String(err));
-      } finally {
-        garminButton.disabled = false;
-        garminButton.textContent = 'Synchronizuj z Garminem';
+
+        displayLines.push(
+          'Dodano do FITNESS: ' +
+          fitType +
+          ' · ' +
+          date +
+          (fitDetails?.success ? ' · dane FIT zapisane' : '')
+        );
+      });
+
+      // Zapisujemy dane FITNESS i pozostałe dane Garmina.
+      if (addedToCalendar || updatedWithFit) {
+        fitnessModule.setWorkouts(workouts);
       }
-    });
-  }
 
+      rootData.workouts = workouts;
+      rootData.garminWalking = walkingData;
+      rootData.updatedAt = new Date().toISOString();
+
+      localStorage.setItem(
+        STORE_KEY,
+        JSON.stringify(rootData)
+      );
+
+      scheduleUpload();
+
+      const syncInfo = data.syncInfo || {};
+
+      garminStatus.textContent =
+        'Synchronizacja zakończona. ' +
+        'Nowe treningi: ' + addedToCalendar +
+        '. Uzupełnione treningi: ' + updatedWithFit +
+        '. Spacery: ' + addedWalking +
+        '. Zapisane dane FIT: ' + fitSaved +
+        '. Pominięte: ' + skipped + '.';
+
+      let summary = displayLines.length
+        ? displayLines.join('\n')
+        : 'Nie znaleziono nowych aktywności wymagających importu.';
+
+      summary +=
+        '\n\nPODSUMOWANIE SYNCHRONIZACJI\n' +
+        'Aktywności pobrane: ' +
+        (syncInfo.activitiesReceived ?? list.length) +
+        '\nPobrane pliki FIT: ' +
+        (syncInfo.downloadedFitCount ?? 0) +
+        '\nAktywności z już zapisanym FIT: ' +
+        (syncInfo.skippedKnownCount ?? 0) +
+        '\nZapisane zestawy danych FIT: ' +
+        fitSaved;
+
+      if (Object.keys(fitErrors).length) {
+        summary += '\n\nBŁĘDY POBIERANIA FIT\n';
+
+        Object.entries(fitErrors).forEach(([id, message]) => {
+          summary += '\n' + id + ': ' + message;
+        });
+      }
+
+      // Pokazujemy przykładowe statystyki tętna.
+      const workoutsWithFit = workouts.filter(
+        w => w.garminFit?.success
+      );
+
+      if (workoutsWithFit.length) {
+        summary += '\n\nDANE TĘTNA Z TRENINGÓW\n';
+
+        workoutsWithFit.slice(0, 5).forEach(w => {
+          const hr = w.garminFit.heartRate || {};
+
+          summary +=
+            '\n' + w.name + ' (' + w.date + ')' +
+            '\nŚrednie: ' + (hr.average ?? 'brak') + ' bpm' +
+            '\nMaksymalne: ' + (hr.maximum ?? 'brak') + ' bpm' +
+            '\nMinimalne: ' + (hr.minimum ?? 'brak') + ' bpm' +
+            '\nPróbki: ' + (hr.sampleCount ?? 0);
+        });
+      }
+
+      garminResults.textContent = summary;
+      garminResults.hidden = false;
+
+    } catch (err) {
+      garminStatus.textContent =
+        'Błąd: ' +
+        (err && err.message ? err.message : String(err));
+
+    } finally {
+      garminButton.disabled = false;
+      garminButton.textContent = 'Synchronizuj z Garminem';
+    }
+  });
+}
   window.addEventListener('lifetracker:datachange', scheduleUpload);
   client.auth.getSession().then(async ({ data, error }) => {
     if (error) { status('Błąd sesji: ' + error.message, '#ff8a80'); return; }
