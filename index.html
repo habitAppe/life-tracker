@@ -308,6 +308,25 @@ body { background-color:#101412; color:#e7eee9; }
   #panel-fitness .fit-event { -webkit-line-clamp:2; font-size:7.5px; }
 }
 </style>
+
+<style id="fitness-calendar-mobile-consistency">
+/* Mobile fallback: use explicit activity classes so colored cells render consistently in iOS/PWA browsers. */
+#panel-fitness .fit-day.has-strength { background:#233b59 !important; border-color:#41658f !important; }
+#panel-fitness .fit-day.has-run { background:#1d493a !important; border-color:#34765d !important; }
+#panel-fitness .fit-day.has-bike { background:#57421f !important; border-color:#8b692f !important; }
+#panel-fitness .fit-day.has-other { background:#443456 !important; border-color:#70548d !important; }
+@media (max-width:700px) {
+  #panel-fitness .fit-cal-grid { gap:4px !important; }
+  #panel-fitness .fit-day { min-height:100px !important; padding:5px 4px !important; border-radius:8px !important; }
+  #panel-fitness .fit-day-num { min-width:21px !important; height:21px !important; margin:0 0 3px !important; font-size:10px !important; }
+  #panel-fitness .fit-event { display:-webkit-box !important; -webkit-box-orient:vertical !important; -webkit-line-clamp:3 !important; overflow:hidden !important; overflow-wrap:anywhere !important; font-size:9px !important; line-height:1.25 !important; padding:2px 1px !important; margin:1px 0 0 !important; background:transparent !important; color:#f5faf6 !important; }
+  #panel-fitness .fit-day-more { font-size:8px !important; }
+}
+@media (max-width:380px) {
+  #panel-fitness .fit-day { min-height:94px !important; padding:4px 3px !important; }
+  #panel-fitness .fit-event { font-size:8px !important; -webkit-line-clamp:3 !important; }
+}
+</style>
 </head><body>
 <title>Karta nawyków</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -1430,7 +1449,8 @@ window.addEventListener('hashchange', function () {
       const key=date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0');
       const entries=byDate[key]||[];
       const todayClass=key===today?' today':'';
-      html+=`<button type="button" class="fit-day${outside?' outside':''}${todayClass}" data-fit-day="${key}"><span class="fit-day-num">${day}</span>${entries.slice(0,2).map(x=>`<span class="fit-event ${fitClass(x.type)}" data-fit-edit="${x.id}" title="${esc(fitCalendarLabel(x))}">${esc(fitCalendarLabel(x))}</span>`).join('')}${entries.length>2?`<span class="fit-day-more">+${entries.length-2} więcej</span>`:''}</button>`;
+      const activityClass=entries.length?' has-'+fitClass(entries[0].type):'';
+      html+=`<button type="button" class="fit-day${outside?' outside':''}${todayClass}${activityClass}" data-fit-day="${key}"><span class="fit-day-num">${day}</span>${entries.slice(0,2).map(x=>`<span class="fit-event ${fitClass(x.type)}" data-fit-edit="${x.id}" title="${esc(fitCalendarLabel(x))}">${esc(fitCalendarLabel(x))}</span>`).join('')}${entries.length>2?`<span class="fit-day-more">+${entries.length-2} więcej</span>`:''}</button>`;
     }
     $('fit-calendar-grid').innerHTML=html;
     const monthWorkouts=workouts.filter(x=>monthKey(x.date)===month);
