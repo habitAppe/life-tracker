@@ -1723,7 +1723,7 @@ window.addEventListener('hashchange', function () {
         }
 
         const { data, error } = await client.functions.invoke('garmin-sync', {
-          body: { testFit: true }
+          body: { testFit: true, activityId: '24724663945' }
         });
 
         if (error) {
