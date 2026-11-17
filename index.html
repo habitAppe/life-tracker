@@ -1971,9 +1971,16 @@ window.addEventListener('hashchange', function () {
     const file=e.target.files&&e.target.files[0];if(!file)return;
     try{
       let raw=await file.text();raw=raw.replace(/^\uFEFF/,'');
-      const first=raw.split(/\r?\n/)[0]||'';const delim=[';','\t',','].sort((a,b)=>first.split(b).length-first.split(a).length)[0];
+      // Eksport mBanku zawiera kilka wierszy informacyjnych przed właściwym nagłówkiem.
+      // Ustal separator na podstawie wiersza z nagłówkami, a nie pierwszej linii pliku.
+      const lines=raw.split(/\r?\n/);let delim=';';
+      const headerLine=lines.find(line=>/data\s+ksi\u0119gowania|data\s+operacji/i.test(line)&&/kwota/i.test(line))||lines[0]||'';
+      delim=[';','\t',','].sort((a,b)=>headerLine.split(b).length-headerLine.split(a).length)[0];
       const rows=parseCSV(raw,delim);if(rows.length<2)throw new Error('Plik nie zawiera wierszy transakcji.');
-      const headers=rows[0].map(normHead);
+      const normalizeHeader=v=>normHead(v).replace(/^#+\s*/,'').replace(/^\s+|\s+$/g,'');
+      const headerIndex=rows.findIndex(r=>{const h=r.map(normalizeHeader);return h.some(x=>x.includes('data ksiegowania')||x.includes('data operacji')||x==='data')&&h.some(x=>x==='kwota'||x.includes('amount')||x.includes('wartosc'));});
+      if(headerIndex<0)throw new Error('Nie znalazłem w pliku wiersza nagłówków z kolumnami daty i kwoty.');
+      const headers=rows[headerIndex].map(normalizeHeader);
       const find=(tests)=>headers.findIndex(h=>tests.some(t=>h===t||h.includes(t)));
       let di=find(['data operacji','data ksiegowania','data transakcji','data']);
       let ai=find(['kwota','amount','wartosc']);
@@ -1981,7 +1988,7 @@ window.addEventListener('hashchange', function () {
       let ci=find(['kategoria']); let ti=find(['typ','rodzaj','operacja']);
       if(di<0||ai<0){throw new Error('Nie rozpoznaję kolumn daty i kwoty. Sprawdź, czy to CSV z historią operacji mBanku.');}
       const parsed=[];
-      rows.slice(1).forEach(r=>{
+      rows.slice(headerIndex+1).forEach(r=>{
         const date=parseBankDate(r[di]);const amountRaw=parseMoney(r[ai]);if(!date||!Number.isFinite(amountRaw)||amountRaw===0)return;
         const description=(ni>=0?r[ni]:'')||'Transakcja z banku';
         const typeText=ti>=0?normHead(r[ti]):'';
