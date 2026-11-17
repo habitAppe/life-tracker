@@ -349,6 +349,85 @@ body { background-color:#101412; color:#e7eee9; }
 .fit-detail-tags span { border:1px solid #35413a; border-radius:8px; padding:6px 9px; color:#d5e0d8; font-size:12px; }
 @media(max-width:600px) { .fit-detail-overlay { padding:8px; align-items:flex-end; } .fit-detail-dialog { max-height:92vh; padding:14px; border-radius:15px 15px 10px 10px; } .fit-detail-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .fit-detail-head h2 { font-size:19px; } }
 </style>
+<style>
+/* ---------- LifeTracker visual polish v2 ---------- */
+:root {
+  --lt-mint:#45e0b0; --lt-blue:#67a8ff; --lt-orange:#ffad66;
+  --lt-violet:#b49aff; --lt-pink:#ff78ad; --lt-cyan:#63d8ed;
+}
+/* Clearer hierarchy and more deliberate surfaces */
+.appnav { gap:10px; padding-top:12px; padding-bottom:12px; box-shadow:0 8px 28px rgba(0,0,0,.16); }
+.app-tab { transition:transform .18s ease,background .18s ease,border-color .18s ease; }
+.app-tab:hover { transform:translateY(-1px); border-color:#52665a; }
+.app-tab.active { box-shadow:0 5px 18px rgba(69,224,176,.22); }
+.module-wrap { padding-top:32px; }
+.module-head { margin-bottom:24px; }
+.module-head h1 { letter-spacing:-.045em; }
+.module-card { border-radius:17px; box-shadow:0 10px 28px rgba(0,0,0,.12); transition:border-color .2s ease,transform .2s ease; }
+.module-card h2 { letter-spacing:-.025em; }
+.module-card:has(.stats-grid) { background:linear-gradient(145deg,#1b2520,#171e1b 72%); }
+.stats-grid .stat { border-radius:13px; background:linear-gradient(145deg,#1c2722,#121815); border-color:#34443b; padding:15px; }
+.stats-grid .stat:nth-child(1) { border-top:2px solid var(--lt-mint); }
+.stats-grid .stat:nth-child(2) { border-top:2px solid var(--lt-blue); }
+.stats-grid .stat:nth-child(3) { border-top:2px solid var(--lt-orange); }
+.stats-grid .stat span { letter-spacing:.035em; text-transform:uppercase; }
+.stats-grid .stat strong { line-height:1.15; }
+.action { transition:filter .18s ease,transform .18s ease,border-color .18s ease; }
+.action:hover { filter:brightness(1.12); transform:translateY(-1px); }
+.entry { border-radius:13px; padding:14px; transition:border-color .18s ease,background .18s ease; }
+.entry:hover { border-color:#46594d; background:#151d18; }
+.entry-main strong { letter-spacing:-.01em; }
+.entry-meta { line-height:1.5; }
+.fit-detail-btn { display:inline-flex; align-items:center; gap:6px; margin-top:9px; padding:6px 10px; border:1px solid rgba(69,224,176,.35); border-radius:8px; background:rgba(69,224,176,.08); color:#72edc3; font-weight:700; text-decoration:none; transition:all .18s ease; }
+.fit-detail-btn:hover { background:rgba(69,224,176,.17); border-color:#72edc3; }
+/* Workout details: a distinct, presentation-ready dark dashboard */
+.fit-detail-overlay { padding:22px; background:rgba(3,8,6,.82); backdrop-filter:blur(9px); }
+.fit-detail-dialog { width:min(900px,100%); max-height:min(92vh,960px); padding:24px; border:1px solid #3b5147; border-radius:22px; background:radial-gradient(ellipse at 92% 0%,rgba(103,168,255,.12),transparent 35%),linear-gradient(155deg,#1b2721 0%,#121a16 62%,#101713 100%); box-shadow:0 30px 100px rgba(0,0,0,.62); scrollbar-color:#52665a #17201b; }
+.fit-detail-head { align-items:center; padding-bottom:16px; border-bottom:1px solid #33443a; }
+.fit-detail-head h2 { font:700 clamp(22px,3vw,29px) var(--f-display); letter-spacing:-.035em; }
+.fit-detail-head .muted { font-size:12px; letter-spacing:.04em; }
+.fit-detail-close { width:42px; height:42px; border-radius:12px; background:#26352d; border-color:#43594b; transition:all .18s ease; }
+.fit-detail-close:hover { background:#34483c; transform:rotate(90deg); }
+.fit-detail-section { margin-top:16px; padding:18px; border:1px solid #34483d; border-radius:16px; background:linear-gradient(145deg,rgba(27,39,32,.96),rgba(17,25,21,.98)); box-shadow:0 8px 24px rgba(0,0,0,.12); }
+.fit-detail-section h3 { display:flex; align-items:center; gap:9px; margin-bottom:14px; color:#e8f2eb; font-size:14px; font-weight:800; letter-spacing:.025em; }
+.fit-detail-section h3:before { content:""; width:4px; height:17px; border-radius:4px; background:linear-gradient(180deg,var(--lt-mint),var(--lt-blue)); }
+.fit-detail-grid { gap:10px; }
+.fit-detail-stat { position:relative; overflow:hidden; padding:14px; border:1px solid #35483d; border-radius:12px; background:linear-gradient(145deg,#202d26,#18221c); }
+.fit-detail-stat:after { content:""; position:absolute; inset:0 auto 0 0; width:3px; background:var(--stat-accent,var(--lt-mint)); opacity:.95; }
+.fit-detail-stat:nth-child(6n+1) { --stat-accent:var(--lt-mint); }
+.fit-detail-stat:nth-child(6n+2) { --stat-accent:var(--lt-blue); }
+.fit-detail-stat:nth-child(6n+3) { --stat-accent:var(--lt-orange); }
+.fit-detail-stat:nth-child(6n+4) { --stat-accent:var(--lt-violet); }
+.fit-detail-stat:nth-child(6n+5) { --stat-accent:var(--lt-pink); }
+.fit-detail-stat:nth-child(6n) { --stat-accent:var(--lt-cyan); }
+.fit-detail-stat span { color:#a9b9af; font-size:10px; font-weight:750; letter-spacing:.075em; text-transform:uppercase; }
+.fit-detail-stat strong { color:#f3faf5; font:700 clamp(17px,2.5vw,22px) var(--f-display); letter-spacing:-.025em; }
+/* Heart-rate graph gets the visual focus: vivid coral line, soft glow and clean grid */
+.fit-detail-chart { margin-top:5px; padding:10px 8px 4px; border:1px solid #35483d; border-radius:13px; background:radial-gradient(ellipse at 50% 0%,rgba(255,120,173,.09),transparent 70%),#111a15; }
+.fit-detail-chart polyline { stroke:#ff668f !important; stroke-width:3.4 !important; filter:drop-shadow(0 0 4px rgba(255,102,143,.7)) drop-shadow(0 0 10px rgba(255,102,143,.28)); }
+.fit-detail-chart line { stroke:#34443b !important; }
+.fit-detail-chart text { fill:#a9b9af !important; font-family:Inter,system-ui,sans-serif; font-size:10px; }
+.fit-detail-tags { gap:8px; }
+.fit-detail-tags span { border-color:#405448; border-radius:9px; background:#202d26; color:#dcebe1; font-weight:600; }
+.fit-detail-empty { padding:16px; border:1px dashed #405448; border-radius:12px; background:#141d18; }
+/* Calendar retains its existing activity colors; only refine its frame */
+#panel-fitness .fit-cal-grid { gap:7px; }
+#panel-fitness .fit-day { border-radius:11px; transition:filter .16s ease,transform .16s ease; }
+#panel-fitness .fit-day:not(.outside):hover { transform:translateY(-1px); }
+@media(max-width:600px) {
+  .module-wrap { padding:20px 12px 42px; }
+  .appnav { overflow-x:auto; padding:9px 12px; }
+  .app-tab { flex:0 0 auto; padding:10px 15px; }
+  .module-grid { grid-template-columns:1fr; }
+  .fit-detail-overlay { padding:7px; }
+  .fit-detail-dialog { padding:15px; border-radius:19px 19px 12px 12px; }
+  .fit-detail-section { padding:13px; }
+  .fit-detail-stat { padding:11px; }
+  .fit-detail-stat strong { font-size:18px; }
+}
+@media(prefers-reduced-motion:reduce) { *,*:before,*:after { scroll-behavior:auto!important; transition:none!important; } }
+
+</style>
 </head><body>
 <title>Karta nawyków</title>
 <meta name="claude:viewport-fit-sides" content="cover">
