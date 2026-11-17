@@ -977,7 +977,10 @@ details.tbl .tw { overflow-x: auto; }
     <div class="work-summary-grid">
       <article class="module-card work-stat"><span>Przepracowany czas</span><strong id="work-total-hours">0 h</strong><small id="work-days-count">0 dni pracy</small></article>
       <article class="module-card work-stat"><span>Nadgodziny i dodatki</span><strong id="work-premium-hours">0 h</strong><small id="work-premium-note">Dni robocze, soboty i niedziele</small></article>
-      <article class="module-card work-stat work-pay"><span>Dodatki do pensji + premia</span><strong id="work-total-pay">0 zł</strong><small id="work-pay-note">Bez podstawowej pensji etatowej</small></article>
+      <details class="module-card work-stat work-pay work-pay-details">
+        <summary><span>Podgląd wynagrodzenia</span><strong>Ukryte · kliknij, aby zobaczyć</strong><small>Kwoty dodatków i premii za wybrany miesiąc</small></summary>
+        <div class="work-pay-reveal"><strong id="work-total-pay">0 zł</strong><small id="work-pay-note">Bez podstawowej pensji etatowej</small><div id="work-pay-breakdown"></div></div>
+      </details>
     </div>
 
     <div class="module-grid work-layout">
@@ -985,15 +988,14 @@ details.tbl .tw { overflow-x: auto; }
         <div class="section-title"><h2 id="work-form-title">Dodaj dzień pracy</h2><span class="muted small">Jedna pozycja na dzień</span></div>
         <form id="work-form" class="form-grid">
           <label class="wide">Data<input id="work-date" type="date" required></label>
-          <div class="work-form-divider wide">Wpisz godziny rozpoczęcia i zakończenia albo sam łączny czas</div>
+          <div class="work-form-divider wide">Wpisz godzinę rozpoczęcia i zakończenia pracy</div>
           <label>Od<input id="work-start" type="time"></label>
           <label>Do<input id="work-end" type="time"></label>
           <label>Przerwa (min)<input id="work-break" type="number" min="0" step="5" value="0"></label>
-          <label>Łącznie godzin<input id="work-hours-direct" type="number" min="0.01" max="24" step="0.25" placeholder="np. 8,5"></label>
           <label class="wide">Komentarz do dnia<textarea id="work-comment" rows="2" maxlength="240" placeholder="np. Montaż okien w Kołobrzegu, pergola, dojazd…"></textarea></label>
           <input id="work-edit-id" type="hidden">
           <div class="fit-form-actions wide"><button id="work-submit" class="action primary" type="submit">+ Zapisz dzień</button><button id="work-cancel" class="action" type="button" hidden>Anuluj edycję</button></div>
-          <p class="muted small wide" id="work-form-hint">Jeśli wpiszesz łączną liczbę godzin, będzie ona miała pierwszeństwo przed godzinami od–do.</p>
+          <p class="muted small wide" id="work-form-hint">Czas pracy i nadgodziny zostaną obliczone automatycznie na podstawie godzin od–do. Przerwa jest odejmowana od czasu pracy.</p>
         </form>
       </article>
 
@@ -2180,15 +2182,18 @@ window.addEventListener('hashchange', function () {
   function dateObj(s){const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d,12);}
   function dateStr(d){return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
   function getHours(item){
-    const direct=Number(item.hours);
-    if(Number.isFinite(direct)&&direct>0)return direct;
-    if(!item.start||!item.end)return 0;
+    // Nowe wpisy zawsze liczymy z godzin od–do; starsze wpisy bez godzin
+    // zachowują dotychczas zapisaną wartość dla zgodności wstecznej.
+    if(!item.start||!item.end){
+      const legacy=Number(item.hours);
+      return Number.isFinite(legacy)&&legacy>0?legacy:0;
+    }
     const [sh,sm]=item.start.split(':').map(Number),[eh,em]=item.end.split(':').map(Number);
-    if(!Number.isFinite(sh)||!Number.isFinite(eh))return 0;
-    let mins=eh*60+em-(sh*60+sm);
-    if(mins<=0)mins+=1440;
+    if(!Number.isFinite(sh)||!Number.isFinite(sm)||!Number.isFinite(eh)||!Number.isFinite(em))return 0;
+    let mins=(eh*60+em)-(sh*60+sm);
+    if(mins<=0)mins+=1440; // zmiana kończąca się po północy
     mins-=Math.max(0,Number(item.breakMinutes)||0);
-    return Math.max(0,mins/60);
+    return Math.max(0,mins)/60;
   }
   function calc(item){
     const h=getHours(item), day=dateObj(item.date).getDay(), rate=Number(settings.hourlyRate)||0;
@@ -2219,7 +2224,7 @@ window.addEventListener('hashchange', function () {
       const d=new Date(start);d.setDate(start.getDate()+i);
       const ds=dateStr(d), inMonth=d.getMonth()===mo-1, item=byDate.get(ds), c=item?calc(item):null;
       const classes=['work-day',!inMonth?'outside':'',item?'has-entry':'',d.getDay()===6?'saturday':'',d.getDay()===0?'sunday':'',ds===today?'today':''].filter(Boolean).join(' ');
-      html+=`<button type="button" class="${classes}" data-work-day="${ds}" ${!inMonth?'tabindex="-1"':''}><span class="work-day-num">${d.getDate()}</span>${item?`<span class="work-day-hours">${fmtHours(c.hours)}</span><span class="work-day-pay">${money(c.pay)}</span>`:''}</button>`;
+      html+=`<button type="button" class="${classes}" data-work-day="${ds}" ${!inMonth?'tabindex="-1"':''}><span class="work-day-num">${d.getDate()}</span>${item?`<span class="work-day-hours">${fmtHours(c.hours)}</span>`:''}</button>`;
     }
     grid.innerHTML=html;
     const items=monthEntries(), t=monthTotals(items);
@@ -2231,23 +2236,25 @@ window.addEventListener('hashchange', function () {
     $('work-total-hours').textContent=fmtHours(t.hours);
     $('work-days-count').textContent=`${days} ${days===1?'dzień pracy':days>1&&days<5?'dni pracy':'dni pracy'}`;
     $('work-premium-hours').textContent=fmtHours(t.plus50+t.plus100);
-    $('work-premium-note').textContent=`42 zł/h: ${fmtHours(t.plus50)} · 56 zł/h: ${fmtHours(t.plus100)}`;
+    $('work-premium-note').textContent=`150%: ${fmtHours(t.plus50)} · 200%: ${fmtHours(t.plus100)}`;
     $('work-total-pay').textContent=money(t.pay+bonus);
     $('work-pay-note').textContent=`Dodatki ${money(t.pay)} + premia ${money(bonus)} · bez pensji etatowej`;
     $('work-month-label').textContent=items.length?new Intl.DateTimeFormat('pl-PL',{month:'long',year:'numeric'}).format(dateObj(monthInput.value+'-01')):'Brak wpisów';
     $('work-breakdown').innerHTML=[
       ['Godziny podstawowe',fmtHours(t.regular)],
-      ['Godziny płatne 150% (42 zł/h)',fmtHours(t.plus50)],
-      ['Godziny płatne 200% (56 zł/h)',fmtHours(t.plus100)],
-      ['Wynagrodzenie za nadgodziny i weekendy',money(t.pay)],
+      ['Godziny płatne 150%',fmtHours(t.plus50)],
+      ['Godziny płatne 200%',fmtHours(t.plus100)],
+    ].map(([a,b])=>`<div><span>${a}</span><strong>${b}</strong></div>`).join('');
+    $('work-pay-breakdown').innerHTML=[
+      ['Dodatki za nadgodziny i weekendy',money(t.pay)],
       ['Premia miesięczna',money(bonus)],
       ['Łącznie dodatkowo do pensji',money(t.pay+bonus)]
     ].map(([a,b])=>`<div><span>${a}</span><strong>${b}</strong></div>`).join('');
     $('work-entry-list').innerHTML=items.length?items.slice().reverse().map(x=>{
       const c=calc(x),day=dateObj(x.date).getDay();
       const label=day===6?'Sobota · 42 zł/h':day===0?'Niedziela · 56 zł/h':c.plus50>0?'Nadgodziny · 42 zł/h':'Dzień roboczy · bez dodatku';
-      const time=x.start&&x.end?`${x.start}–${x.end}${x.breakMinutes?` · przerwa ${x.breakMinutes} min`:''}`:'Wpisana łączna liczba godzin';
-      return `<div class="work-entry"><div class="work-entry-main"><strong>${esc(x.date)} · ${fmtHours(c.hours)}</strong><small>${esc(label)} · ${esc(time)}${x.comment?' · '+esc(x.comment):''}</small></div><div class="work-entry-side"><strong>${money(c.pay)}</strong><div><button type="button" data-work-edit="${esc(x.id)}">Edytuj</button> <button type="button" data-work-delete="${esc(x.id)}">Usuń</button></div></div></div>`;
+      const time=x.start&&x.end?`${x.start}–${x.end}${x.breakMinutes?` · przerwa ${x.breakMinutes} min`:''}`:'Wpisane godziny od–do';
+      return `<div class="work-entry"><div class="work-entry-main"><strong>${esc(x.date)} · ${fmtHours(c.hours)}</strong><small>${esc(label)} · ${esc(time)}${x.comment?' · '+esc(x.comment):''}</small></div><div class="work-entry-side"><div><button type="button" data-work-edit="${esc(x.id)}">Edytuj</button> <button type="button" data-work-delete="${esc(x.id)}">Usuń</button></div></div></div>`;
     }).join(''):'<p class="muted">Brak wpisów w tym miesiącu.</p>';
     renderCalendar();
   }
@@ -2260,7 +2267,7 @@ window.addEventListener('hashchange', function () {
     const x=entries.find(v=>String(v.id)===String(id));if(!x)return;
     editingId=String(x.id);$('work-edit-id').value=editingId;$('work-date').value=x.date;
     $('work-start').value=x.start||'';$('work-end').value=x.end||'';
-    $('work-break').value=x.breakMinutes||0;$('work-hours-direct').value=x.hours||'';
+    $('work-break').value=x.breakMinutes||0;
     $('work-comment').value=x.comment||'';$('work-form-title').textContent='Edytuj dzień pracy';
     $('work-submit').textContent='Zapisz zmiany';$('work-cancel').hidden=false;
     $('work-form').scrollIntoView({behavior:'smooth',block:'center'});
@@ -2268,15 +2275,12 @@ window.addEventListener('hashchange', function () {
   $('work-form').addEventListener('submit',e=>{
     e.preventDefault();
     const date=$('work-date').value,start=$('work-start').value,end=$('work-end').value;
-    const directRaw=$('work-hours-direct').value.trim(), direct=directRaw===''?0:Number(directRaw.replace(',','.'));
-    const br=Number($('work-break').value)||0;
+    const br=Math.max(0,Number($('work-break').value)||0);
     if(!date){alert('Wybierz datę.');return;}
-    if(directRaw!==''&&(!Number.isFinite(direct)||direct<=0||direct>24)){alert('Podaj prawidłową liczbę godzin (od 0,01 do 24).');return;}
-    if(directRaw===''&&(!start||!end)){alert('Wpisz godziny od–do albo łączną liczbę godzin.');return;}
-    if(directRaw===''&&start===end){alert('Godzina rozpoczęcia i zakończenia nie mogą być takie same.');return;}
-    const item={id:editingId||`work-${Date.now()}`,date,start,directHours:direct,hours:direct||0,end,breakMinutes:br,comment:$('work-comment').value.trim()};
-    // W przypadku wpisania godzin od–do wyliczenie odbywa się przy odczycie; pole hours pozostaje zerowe.
-    if(!direct)item.hours=0;
+    if(!start||!end){alert('Wpisz godzinę rozpoczęcia i zakończenia pracy.');return;}
+    if(start===end){alert('Godzina rozpoczęcia i zakończenia nie mogą być takie same.');return;}
+    const item={id:editingId||`work-${Date.now()}`,date,start,end,breakMinutes:br,comment:$('work-comment').value.trim()};
+    if(getHours(item)<=0){alert('Po odjęciu przerwy czas pracy musi być większy od zera.');return;}
     if(editingId)entries=entries.map(x=>String(x.id)===editingId?item:x);
     else {
       const existing=entries.find(x=>x.date===date);
@@ -2703,7 +2707,17 @@ hr{border-color:#3c493b!important;opacity:.9}
 #panel-work .work-stat>strong{font-size:clamp(22px,3vw,30px);line-height:1.1;color:#d0ed83;font-weight:850;font-variant-numeric:tabular-nums}
 #panel-work .work-stat>small{font-size:11px;color:#9eac9c}
 #panel-work .work-pay{border-color:#71834b}
-#panel-work .work-pay>strong{color:#e8c477}
+#panel-work .work-pay{padding:0;overflow:hidden}
+#panel-work .work-pay summary{list-style:none;cursor:pointer;padding:16px 18px;display:flex;flex-direction:column;gap:7px}
+#panel-work .work-pay summary::-webkit-details-marker{display:none}
+#panel-work .work-pay summary>span{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#aab8a7}
+#panel-work .work-pay summary>strong{font-size:clamp(16px,2vw,21px);line-height:1.2;color:#e8c477}
+#panel-work .work-pay summary>small,#panel-work .work-pay-reveal>small{font-size:11px;color:#9eac9c}
+#panel-work .work-pay-reveal{padding:0 18px 16px;border-top:1px solid #354235;display:flex;flex-direction:column;gap:7px}
+#panel-work .work-pay-reveal>strong{font-size:28px;color:#e8c477;padding-top:12px}
+#panel-work #work-pay-breakdown{display:grid;gap:7px;margin-top:8px}
+#panel-work #work-pay-breakdown>div{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:#b7c3b0}
+#panel-work #work-pay-breakdown strong{color:#edf2e8;font-variant-numeric:tabular-nums}
 #panel-work .work-layout{grid-template-columns:minmax(280px,.8fr) minmax(0,1.2fr);align-items:start}
 #panel-work .work-form-divider{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#c5d58e;border-top:1px solid #3c493b;padding-top:12px}
 #panel-work .work-weekdays,#panel-work .work-calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
@@ -2741,7 +2755,7 @@ hr{border-color:#3c493b!important;opacity:.9}
 #panel-work .work-settings summary{cursor:pointer;font-weight:800;color:#d5e4c8}
 #panel-work .work-settings form{margin-top:14px}
 @media(max-width:760px){#panel-work .work-layout{grid-template-columns:1fr}#panel-work .work-summary-grid{grid-template-columns:1fr 1fr}#panel-work .work-pay{grid-column:1/-1}}
-@media(max-width:480px){#panel-work .work-summary-grid{gap:7px}#panel-work .work-stat{padding:12px}#panel-work .work-stat>strong{font-size:22px}#panel-work .work-day{min-height:61px;padding:5px 3px;gap:3px}#panel-work .work-day-hours{font-size:9px}#panel-work .work-day-pay{font-size:8px}#panel-work .work-calendar{gap:3px}#panel-work .work-breakdown{grid-template-columns:1fr 1fr}#panel-work .work-entry{align-items:flex-start}}
+@media(max-width:480px){#panel-work .work-summary-grid{gap:7px}#panel-work .work-stat{padding:12px}#panel-work .work-stat>strong{font-size:22px}#panel-work .work-day{min-height:61px;padding:5px 3px;gap:3px}#panel-work .work-day-hours{font-size:9px}#panel-work .work-day-pay{display:none}#panel-work .work-calendar{gap:3px}#panel-work .work-breakdown{grid-template-columns:1fr 1fr}#panel-work .work-entry{align-items:flex-start}}
 </style>
 
 </body></html>
