@@ -167,6 +167,10 @@ input[type="text"].title:focus { border-bottom-color: var(--accent); }
 .hh h3 { font-family: var(--f-display); font-size: 18px; font-weight: 600; overflow-wrap: anywhere; flex: 1; min-width: 0; line-height: 1.2; }
 .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--hc); flex: none; }
 .gc { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.habit-tags { display:flex; gap:6px; flex-wrap:wrap; margin-top:-5px; }
+.habit-tag { font-size:11px; color:var(--muted); border:1px solid var(--line); border-radius:99px; padding:3px 8px; }
+.summaries { display:grid; gap:10px; margin-bottom:14px; }
+.summaries .sum { margin:0; }
 .mp { font-family: var(--f-display); font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .prog { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; }
 .count { font-family: var(--f-display); font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
@@ -382,6 +386,7 @@ var CHR = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fi
 var LS_KEY = 'karta-nawykow-v1';
 var APP_KEY = 'life-tracker-unified-v1';
 var VIEWS = { tydzien: 1, miesiac: 1, rok: 1 };
+var HABIT_CATEGORIES = ['HEALTH', 'PERSONAL', 'WORK', 'LEARNING', 'LIFESTYLE'];
 
 function $(id) { return document.getElementById(id); }
 function pad(n) { return n < 10 ? '0' + n : '' + n; }
@@ -421,7 +426,12 @@ function load(o) {
   o.habits.forEach(function (h) {
     if (!h || typeof h.id !== 'string' || typeof h.name !== 'string') return;
     var goal = Math.max(1, Math.min(7, Math.round(+h.goal) || 3));
-    var hh = { id: h.id, name: h.name.slice(0, 40), goal: goal, c: (Math.round(+h.c) || 0) % 6, since: isDateStr(h.since) ? h.since : ds(today()) };
+    var legacyName = h.name.toLowerCase();
+    var inferredHealth = /trening siłowy|siłowy|bieganie|running|morning mobility|mobility/.test(legacyName);
+    var category = HABIT_CATEGORIES.indexOf(h.category) >= 0 ? h.category : (inferredHealth ? 'HEALTH' : 'PERSONAL');
+    var inferredWeight = /trening siłowy|siłowy|bieganie|running/.test(legacyName) ? 2 : 1;
+    var weight = Math.max(1, Math.min(3, Math.round(+h.weight) || inferredWeight));
+    var hh = { id: h.id, name: h.name.slice(0, 40), goal: goal, c: (Math.round(+h.c) || 0) % 6, category: category, weight: weight, since: isDateStr(h.since) ? h.since : ds(today()) };
     s.habits.push(hh);
     var arr = (o.checks && Array.isArray(o.checks[h.id])) ? o.checks[h.id] : [];
     s.checks[h.id] = new Set(arr.filter(isDateStr));
@@ -433,7 +443,7 @@ function serialize() {
   S.habits.forEach(function (h) { ch[h.id] = Array.from(S.checks[h.id]).sort(); });
   return {
     v: 1, rev: S.rev, title: S.title, sleep: S.sleep,
-    habits: S.habits.map(function (h) { return { id: h.id, name: h.name, goal: h.goal, c: h.c, since: h.since }; }),
+    habits: S.habits.map(function (h) { return { id: h.id, name: h.name, goal: h.goal, c: h.c, category: h.category || 'PERSONAL', weight: h.weight || 1, since: h.since }; }),
     checks: ch
   };
 }
@@ -543,13 +553,13 @@ function toggle(hid, dstr) {
   V.focus = { h: hid, d: dstr };
   renderView(); renderSync();
 }
-function addHabit(name, goal) {
+function addHabit(name, goal, category, weight) {
   if (S.demo) S = { habits: [], checks: {}, rev: 0, demo: false, title: S.title, sleep: {} };
   var used = {}, c = 0;
   S.habits.forEach(function (h) { used[h.c] = 1; });
   while (used[c] && c < 6) c++;
   if (c >= 6) c = S.habits.length % 6;
-  var h = { id: newId(), name: name, goal: goal, c: c, since: ds(today()) };
+  var h = { id: newId(), name: name, goal: goal, c: c, category: category || 'PERSONAL', weight: weight || 1, since: ds(today()) };
   S.habits.push(h); S.checks[h.id] = new Set();
   changed();
 }
@@ -617,12 +627,23 @@ function chips(name, pre, sel) {
   for (var i = 1; i <= 7; i++) o += '<label class="chip"><input type="radio" name="' + name + '" id="' + pre + i + '" value="' + i + '"' + (i === sel ? ' checked' : '') + '><span>' + i + '×</span></label>';
   return '<fieldset class="fs"><legend>Ile razy w tygodniu?</legend><div class="chips">' + o + '</div><p class="hint">7× to codziennie.</p></fieldset>';
 }
+function weightChips(name, pre, sel) {
+  var o = '';
+  for (var i = 1; i <= 3; i++) o += '<label class="chip"><input type="radio" name="' + name + '" id="' + pre + i + '" value="' + i + '"' + (i === sel ? ' checked' : '') + '><span>x' + i + '</span></label>';
+  return '<fieldset class="fs"><legend>Waga nawyku</legend><div class="chips">' + o + '</div></fieldset>';
+}
+function categorySelect(id, selected) {
+  return '<div class="fld"><label for="' + id + '">Kategoria</label><select id="' + id + '" style="font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);min-height:44px;width:100%">' +
+    HABIT_CATEGORIES.map(function (c) { return '<option value="' + c + '"' + (c === selected ? ' selected' : '') + '>' + c + '</option>'; }).join('') + '</select></div>';
+}
 function renderAdd() {
   var el = $('add'), open = V.adding || (!S.habits.length && !S.demo);
   if (!open) { el.innerHTML = ''; return; }
   el.innerHTML = '<form class="panel" data-form="add" novalidate><h2 class="ph">Nowy nawyk</h2>' +
     '<div class="fld"><label for="new-name">Nazwa</label><input type="text" id="new-name" maxlength="40" autocomplete="off" placeholder="np. Trening siłowy"></div>' +
+    categorySelect('new-category', 'PERSONAL') +
     chips('new-goal', 'new-goal-', 3) +
+    weightChips('new-weight', 'new-weight-', 1) +
     '<p class="err" role="alert"></p>' +
     '<div class="row"><button class="btn pri" type="submit">Dodaj</button>' +
     (S.habits.length ? '<button class="btn" type="button" data-act="add-cancel">Anuluj</button>' : '') + '</div></form>';
@@ -640,7 +661,9 @@ function cardEdit(h) {
   var confirm = V.confirmDel === h.id;
   return '<article class="habit" style="--hc:' + hcVar(h) + '"><form data-form="edit" data-id="' + h.id + '" class="panel" style="margin:0;border:0;padding:0" novalidate>' +
     '<div class="fld"><label for="edit-name">Nazwa</label><input type="text" id="edit-name" maxlength="40" autocomplete="off" value="' + esc(h.name) + '"></div>' +
+    categorySelect('edit-category', h.category || 'PERSONAL') +
     chips('edit-goal', 'edit-goal-', h.goal) +
+    weightChips('edit-weight', 'edit-weight-', h.weight || 1) +
     '<p class="hint">Zmiana celu dotyczy też minionych tygodni.</p><p class="err" role="alert"></p>' +
     '<div class="row"><button class="btn pri" type="submit">Zapisz</button><button class="btn" type="button" data-act="cancel">Anuluj</button>' +
     '<button class="btn dng" type="button" data-act="del" data-id="' + h.id + '">' + (confirm ? 'Potwierdź usunięcie' : 'Usuń') + '</button></div></form></article>';
@@ -658,14 +681,35 @@ function cardWeek(h, ws, tdy) {
   if (st > 0) bits.push('Cel zrobiony w ' + st + ' tyg. z rzędu');
   return '<article class="habit" style="--hc:' + hcVar(h) + '"><div class="hh"><span class="dot"></span><h3>' + esc(h.name) + '</h3><span class="gc">cel ' + h.goal + '×/tydz.</span>' +
     (S.demo ? '' : '<button type="button" class="lnk" data-act="edit" data-id="' + h.id + '">Edytuj</button>') + '</div>' +
+    '<div class="habit-tags"><span class="habit-tag">' + esc(h.category || 'PERSONAL') + '</span><span class="habit-tag">waga x' + (h.weight || 1) + '</span></div>' +
     '<div class="prog"><div class="count">' + n + '<span>/' + h.goal + '</span></div>' + barHtml(w, h.name) + '<div class="pct">' + w + '%</div></div>' +
     '<div class="days">' + days + '</div>' + (bits.length ? '<p class="meta">' + bits.join(' · ') + '</p>' : '') + '</article>';
 }
 function viewWeek() {
-  var ws = wstart(V.cursor), tdy = today(), done = 0, planned = 0;
-  S.habits.forEach(function (h) { done += Math.min(weekCount(h, ws), h.goal); planned += h.goal; });
-  return summary('Postęp tygodnia', planned ? done / planned : null, done + ' z ' + planned + ' zaplanowanych razy') +
+  var ws = wstart(V.cursor), tdy = today();
+  var stats = weightedStats(S.habits, function (h) {
+    var n = weekCount(h, ws); return { done: Math.min(n, h.goal), planned: h.goal };
+  });
+  return dualSummary(stats, 'tydzień') +
     '<div class="list">' + S.habits.map(function (h) { return V.editing === h.id ? cardEdit(h) : cardWeek(h, ws, tdy); }).join('') + '</div>';
+}
+function weightedStats(habits, getStats) {
+  var allDone = 0, allPlanned = 0, healthDone = 0, healthPlanned = 0;
+  habits.forEach(function (h) {
+    var st = getStats(h), weight = h.weight || 1;
+    var d = st.done * weight, p = st.planned * weight;
+    allDone += d; allPlanned += p;
+    if ((h.category || 'PERSONAL') === 'HEALTH') { healthDone += d; healthPlanned += p; }
+  });
+  return { allDone: allDone, allPlanned: allPlanned, healthDone: healthDone, healthPlanned: healthPlanned };
+}
+function dualSummary(stats, label, detail) {
+  var allPct = stats.allPlanned ? stats.allDone / stats.allPlanned : null;
+  var healthPct = stats.healthPlanned ? stats.healthDone / stats.healthPlanned : null;
+  return '<div class="summaries">' +
+    summary('Overall Progress · ' + label, allPct, stats.allDone + ' z ' + stats.allPlanned + ' ważonych punktów') +
+    summary('HEALTH Progress · ' + label, healthPct, stats.healthPlanned ? stats.healthDone + ' z ' + stats.healthPlanned + ' ważonych punktów' : 'Brak nawyków w kategorii HEALTH') +
+    '</div>';
 }
 function periodSub(done, planned, met, weeks) {
   return planned ? done + ' z ' + planned + ' zaplanowanych razy, ' + met + ' z ' + weeks + ' tygodni z celem' : 'Brak zakończonych tygodni w tym okresie';
@@ -684,12 +728,12 @@ function cardMonth(h, a, b) {
     rows += '<div class="cr">' + cells + '<span class="sc' + (met ? ' met' : '') + (inMonth ? '' : ' other') + '"' + (inMonth ? '' : ' title="Ten tydzień liczy się do innego miesiąca"') + '>' + sc + '</span></div>';
   }
   return '<article class="habit" style="--hc:' + hcVar(h) + '"><div class="hh"><span class="dot"></span><h3>' + esc(h.name) + '</h3><span class="mp">' + fmtPct(st.pct) + '</span></div>' +
-    barHtml(w, h.name) + '<p class="sub2">cel ' + h.goal + '×/tydz. · ' + esc(periodSub(st.done, st.planned, st.met, st.weeks)) + '</p><div class="cal">' + head + rows + '</div></article>';
+    '<div class="habit-tags"><span class="habit-tag">' + esc(h.category || 'PERSONAL') + '</span><span class="habit-tag">waga x' + (h.weight || 1) + '</span></div>' + barHtml(w, h.name) + '<p class="sub2">cel ' + h.goal + '×/tydz. · ' + esc(periodSub(st.done, st.planned, st.met, st.weeks)) + '</p><div class="cal">' + head + rows + '</div></article>';
 }
 function viewMonth() {
-  var y = V.cursor.getFullYear(), m = V.cursor.getMonth(), a = new Date(y, m, 1), b = new Date(y, m + 1, 0), done = 0, planned = 0, met = 0, weeks = 0;
-  S.habits.forEach(function (h) { var s = periodStats(h, a, b); done += s.done; planned += s.planned; met += s.met; weeks += s.weeks; });
-  return summary('Postęp miesiąca', planned ? done / planned : null, periodSub(done, planned, met, weeks)) +
+  var y = V.cursor.getFullYear(), m = V.cursor.getMonth(), a = new Date(y, m, 1), b = new Date(y, m + 1, 0);
+  var stats = weightedStats(S.habits, function (h) { var st = periodStats(h, a, b); return { done: st.done, planned: st.planned }; });
+  return dualSummary(stats, 'miesiąc') +
     '<div class="list">' + S.habits.map(function (h) { return cardMonth(h, a, b); }).join('') + '</div>';
 }
 function cardYear(h, y) {
@@ -707,12 +751,12 @@ function cardYear(h, y) {
     rows += '<div class="yrow"><span class="ym">' + MON_S[m] + '</span><div class="yd">' + cells + '</div><span class="yp">' + fmtPct(ms.pct) + '</span></div>';
   }
   return '<article class="habit" style="--hc:' + hcVar(h) + '"><div class="hh"><span class="dot"></span><h3>' + esc(h.name) + '</h3><span class="mp">' + fmtPct(st.pct) + '</span></div>' +
-    barHtml(w, h.name) + '<p class="sub2">cel ' + h.goal + '×/tydz. · ' + esc(periodSub(st.done, st.planned, st.met, st.weeks)) + '</p><div class="yr">' + rows + '</div></article>';
+    '<div class="habit-tags"><span class="habit-tag">' + esc(h.category || 'PERSONAL') + '</span><span class="habit-tag">waga x' + (h.weight || 1) + '</span></div>' + barHtml(w, h.name) + '<p class="sub2">cel ' + h.goal + '×/tydz. · ' + esc(periodSub(st.done, st.planned, st.met, st.weeks)) + '</p><div class="yr">' + rows + '</div></article>';
 }
 function viewYear() {
-  var y = V.cursor.getFullYear(), a = new Date(y, 0, 1), b = new Date(y, 11, 31), done = 0, planned = 0, met = 0, weeks = 0;
-  S.habits.forEach(function (h) { var s = periodStats(h, a, b); done += s.done; planned += s.planned; met += s.met; weeks += s.weeks; });
-  return summary('Postęp roku', planned ? done / planned : null, periodSub(done, planned, met, weeks)) +
+  var y = V.cursor.getFullYear(), a = new Date(y, 0, 1), b = new Date(y, 11, 31);
+  var stats = weightedStats(S.habits, function (h) { var st = periodStats(h, a, b); return { done: st.done, planned: st.planned }; });
+  return dualSummary(stats, 'rok') +
     '<div class="list">' + S.habits.map(function (h) { return cardYear(h, y); }).join('') + '</div>';
 }
 function renderView() {
@@ -954,14 +998,19 @@ app.addEventListener('submit', function (e) {
   e.preventDefault();
   if (f.getAttribute('data-form') === 'sleep') { saveSleep(f); return; }
   var kind = f.getAttribute('data-form'), nameEl = f.querySelector('input[type="text"]'), name = nameEl.value.trim().slice(0, 40);
-  var g = f.querySelector('input[type="radio"]:checked'), goal = g ? +g.value : 3;
+  var goalRadio = f.querySelector('input[name$="-goal"]:checked');
+  var weightRadio = f.querySelector('input[name$="-weight"]:checked');
+  var goal = goalRadio ? +goalRadio.value : 3;
+  var weight = weightRadio ? +weightRadio.value : 1;
+  var categoryEl = f.querySelector('select[id$="-category"]');
+  var category = categoryEl && HABIT_CATEGORIES.indexOf(categoryEl.value) >= 0 ? categoryEl.value : 'PERSONAL';
   if (!name) { var er = f.querySelector('.err'); if (er) er.textContent = 'Wpisz nazwę nawyku.'; nameEl.focus(); return; }
   if (kind === 'add') {
-    addHabit(name, goal); V.adding = false;
+    addHabit(name, goal, category, weight); V.adding = false;
     renderBanner(); renderAdd(); renderView(); renderSync();
   } else {
     var h = find(f.getAttribute('data-id'));
-    if (h) { h.name = name; h.goal = goal; changed(); }
+    if (h) { h.name = name; h.goal = goal; h.category = category; h.weight = weight; changed(); }
     V.editing = null; V.confirmDel = null; renderView(); renderSync();
   }
 });
