@@ -1723,7 +1723,7 @@ window.addEventListener('hashchange', function () {
         }
 
         const { data, error } = await client.functions.invoke('garmin-sync', {
-          body: {}
+          body: { testFit: true }
         });
 
         if (error) {
@@ -1811,7 +1811,23 @@ window.addEventListener('hashchange', function () {
         scheduleUpload();
 
         garminStatus.textContent = 'Synchronizacja zakończona. Nowe wpisy w FITNESS: ' + addedToCalendar + '. Spacery zapisane osobno: ' + addedWalking + '. Pominięte duplikaty: ' + skipped + '.';
-        garminResults.textContent = displayLines.length ? displayLines.join('\n') : 'Brak nowych aktywności do dodania.';
+        const importSummary = displayLines.length ? displayLines.join('\n') : 'Brak nowych aktywności do dodania.';
+        let fitSummary = '';
+        if (data.fitTest) {
+          const fit = data.fitTest;
+          fitSummary = '\n\nTEST PLIKU FIT\n' +
+            'Wynik: ' + (fit.success ? 'OK — pobrano plik' : 'NIEPOWODZENIE') + '\n' +
+            'ID aktywności: ' + (fit.activityId ?? 'brak') + '\n' +
+            'HTTP: ' + (fit.status ?? 'brak') + '\n' +
+            'Typ pliku: ' + (fit.contentType ?? 'brak') + '\n' +
+            'Rozmiar: ' + (fit.contentLength ?? 'brak') + ' bajtów\n' +
+            'Sygnatura: ' + (fit.fileSignature ?? 'brak') + '\n' +
+            'Wygląda jak ZIP: ' + (fit.looksLikeZip === true ? 'tak' : fit.looksLikeZip === false ? 'nie' : 'brak danych');
+          if (fit.error) fitSummary += '\nSzczegóły: ' + fit.error;
+        } else {
+          fitSummary = '\n\nTEST PLIKU FIT\nFunkcja nie zwróciła pola fitTest. Sprawdzimy odpowiedź backendu.';
+        }
+        garminResults.textContent = importSummary + fitSummary;
         garminResults.hidden = false;
       } catch (err) {
         garminStatus.textContent = 'Błąd: ' + (err && err.message ? err.message : String(err));
