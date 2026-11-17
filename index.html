@@ -803,6 +803,7 @@ details.tbl .tw { overflow-x: auto; }
   <button class="app-tab active" data-panel="habits">HABITS</button>
   <button class="app-tab" data-panel="fitness">FITNESS</button>
   <button class="app-tab" data-panel="budget">BUDGET</button>
+  <button class="app-tab" data-panel="work">PRACA</button>
 </nav>
 <section id="cloud-account" aria-label="Konto i synchronizacja" style="max-width:1040px;margin:14px auto;padding:0 16px;">
   <div style="background:#181e1b;border:1px solid #2b3430;border-radius:14px;padding:14px 16px;color:#e7eee9;">
@@ -964,6 +965,65 @@ details.tbl .tw { overflow-x: auto; }
       <div class="section-title"><h2>Historia transakcji</h2><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="bud-import-btn" class="action primary" type="button">Importuj CSV</button><input id="bud-import-file" type="file" accept=".csv,text/csv" hidden><button id="bud-export" class="action">Eksport CSV</button></div></div><p class="muted small" id="bud-import-status" aria-live="polite">Importuj historię pobraną z banku. Przed zapisem zobaczysz podsumowanie.</p>
       <div id="budget-list" class="entry-list"><p class="muted">Nie dodano jeszcze transakcji.</p></div>
     </article>
+  </div>
+</section>
+
+<section id="panel-work" class="module-panel">
+  <div class="module-wrap">
+    <header class="module-head">
+      <div><p class="eyebrow">WORK LOG</p><h1>Ewidencja pracy</h1><p class="muted">Ewidencja czasu pracy oraz dodatki do podstawowej pensji etatowej.</p></div>
+    </header>
+
+    <div class="work-summary-grid">
+      <article class="module-card work-stat"><span>Przepracowany czas</span><strong id="work-total-hours">0 h</strong><small id="work-days-count">0 dni pracy</small></article>
+      <article class="module-card work-stat"><span>Nadgodziny i dodatki</span><strong id="work-premium-hours">0 h</strong><small id="work-premium-note">Dni robocze, soboty i niedziele</small></article>
+      <article class="module-card work-stat work-pay"><span>Dodatki do pensji + premia</span><strong id="work-total-pay">0 zł</strong><small id="work-pay-note">Bez podstawowej pensji etatowej</small></article>
+    </div>
+
+    <div class="module-grid work-layout">
+      <article class="module-card">
+        <div class="section-title"><h2 id="work-form-title">Dodaj dzień pracy</h2><span class="muted small">Jedna pozycja na dzień</span></div>
+        <form id="work-form" class="form-grid">
+          <label class="wide">Data<input id="work-date" type="date" required></label>
+          <div class="work-form-divider wide">Wpisz godziny rozpoczęcia i zakończenia albo sam łączny czas</div>
+          <label>Od<input id="work-start" type="time"></label>
+          <label>Do<input id="work-end" type="time"></label>
+          <label>Przerwa (min)<input id="work-break" type="number" min="0" step="5" value="0"></label>
+          <label>Łącznie godzin<input id="work-hours-direct" type="number" min="0.01" max="24" step="0.25" placeholder="np. 8,5"></label>
+          <label class="wide">Komentarz do dnia<textarea id="work-comment" rows="2" maxlength="240" placeholder="np. Montaż okien w Kołobrzegu, pergola, dojazd…"></textarea></label>
+          <input id="work-edit-id" type="hidden">
+          <div class="fit-form-actions wide"><button id="work-submit" class="action primary" type="submit">+ Zapisz dzień</button><button id="work-cancel" class="action" type="button" hidden>Anuluj edycję</button></div>
+          <p class="muted small wide" id="work-form-hint">Jeśli wpiszesz łączną liczbę godzin, będzie ona miała pierwszeństwo przed godzinami od–do.</p>
+        </form>
+      </article>
+
+      <article class="module-card work-calendar-card">
+        <div class="fit-cal-head">
+          <div><h2>Kalendarz pracy</h2><p id="work-month-note" class="fit-month-stats">Wybierz dzień, aby dodać wpis.</p></div>
+          <div class="fit-cal-nav"><button type="button" class="action" id="work-prev-month" aria-label="Poprzedni miesiąc">‹</button><input id="work-month" type="month" aria-label="Wybierz miesiąc"><button type="button" class="action" id="work-next-month" aria-label="Następny miesiąc">›</button></div>
+        </div>
+        <div class="work-weekdays"><span>Pn</span><span>Wt</span><span>Śr</span><span>Cz</span><span>Pt</span><span>So</span><span>Nd</span></div>
+        <div id="work-calendar" class="work-calendar" aria-label="Kalendarz ewidencji pracy"></div>
+        <div class="work-legend"><span><i></i>Dzień pracy</span><span><i></i>Sobota</span><span><i></i>Niedziela</span></div>
+      </article>
+    </div>
+
+    <article class="module-card">
+      <div class="section-title"><h2>Podsumowanie miesiąca</h2><span class="muted small" id="work-month-label"></span></div>
+      <div class="work-breakdown" id="work-breakdown"></div>
+      <h3 class="subheading">Wpisy z miesiąca</h3>
+      <div id="work-entry-list" class="entry-list"><p class="muted">Brak wpisów w tym miesiącu.</p></div>
+    </article>
+
+    <details class="module-card work-settings">
+      <summary>Ustawienia wynagrodzenia</summary>
+      <p class="muted small">Stawki są wykorzystywane wyłącznie do obliczeń w ewidencji pracy. Nie są wyświetlane w kalendarzu.</p>
+      <form id="work-settings-form" class="form-grid">
+        <label>Podstawowa stawka godzinowa (zł)<input id="work-rate" type="number" min="0.01" step="0.01" required></label>
+        <label>Premia miesięczna (zł)<input id="work-bonus" type="number" min="0" step="0.01" required></label>
+        <button class="action primary wide" type="submit">Zapisz ustawienia</button>
+      </form>
+    </details>
   </div>
 </section>
 
@@ -2072,6 +2132,186 @@ window.addEventListener('hashchange', function () {
 })();
 </script>
 
+<script>
+(function(){
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const pad = n => String(n).padStart(2,'0');
+  const now = new Date();
+  const today = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+  const monthNow = today.slice(0,7);
+  const money = n => new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN'}).format(Number(n)||0);
+  const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const readStore = (key, fallback) => {
+    try {
+      if(window.LifeTrackerStore){
+        const v=window.LifeTrackerStore.read(key,null);
+        if(v!==null && v!==undefined) return v;
+      }
+    } catch(e){}
+    return fallback;
+  };
+  const writeStore = (key, legacyKey, value) => {
+    try{localStorage.setItem(legacyKey,JSON.stringify(value));}catch(e){}
+    if(window.LifeTrackerStore) window.LifeTrackerStore.write(key,value);
+  };
+  let entries = readStore('workEntries',null);
+  if(!Array.isArray(entries)){
+    try{entries=JSON.parse(localStorage.getItem('life-tracker-work-v1')||'[]');}catch(e){entries=[];}
+  }
+  if(!Array.isArray(entries)) entries=[];
+  let settings = readStore('workSettings',null);
+  if(!settings || typeof settings!=='object') {
+    try{settings=JSON.parse(localStorage.getItem('life-tracker-work-settings-v1')||'null');}catch(e){settings=null;}
+  }
+  settings = {...{hourlyRate:28,monthlyBonus:500},...(settings||{})};
+  let editingId='';
+  const monthInput=$('work-month');
+  monthInput.value=monthNow;
+  $('work-date').value=today;
+  $('work-rate').value=settings.hourlyRate;
+  $('work-bonus').value=settings.monthlyBonus;
+
+  function persistEntries(){writeStore('workEntries','life-tracker-work-v1',entries);}
+  function persistSettings(){
+    try{localStorage.setItem('life-tracker-work-settings-v1',JSON.stringify(settings));}catch(e){}
+    if(window.LifeTrackerStore)window.LifeTrackerStore.write('workSettings',settings);
+  }
+  function dateObj(s){const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d,12);}
+  function dateStr(d){return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
+  function getHours(item){
+    const direct=Number(item.hours);
+    if(Number.isFinite(direct)&&direct>0)return direct;
+    if(!item.start||!item.end)return 0;
+    const [sh,sm]=item.start.split(':').map(Number),[eh,em]=item.end.split(':').map(Number);
+    if(!Number.isFinite(sh)||!Number.isFinite(eh))return 0;
+    let mins=eh*60+em-(sh*60+sm);
+    if(mins<=0)mins+=1440;
+    mins-=Math.max(0,Number(item.breakMinutes)||0);
+    return Math.max(0,mins/60);
+  }
+  function calc(item){
+    const h=getHours(item), day=dateObj(item.date).getDay(), rate=Number(settings.hourlyRate)||0;
+    let regular=0,plus50=0,plus100=0,pay=0;
+    // Pensja etatowa jest wypłacana osobno. Rejestr PRACA liczy pełną stawkę
+    // za godziny dodatkowo płatne: 150% w dni robocze po 8 h i w soboty,
+    // 200% w niedziele. Przy stawce bazowej 28 zł daje to 42/56 zł za godzinę.
+    if(day===6){plus50=h;pay=h*rate*1.5;}
+    else if(day===0){plus100=h;pay=h*rate*2;}
+    else {regular=Math.min(8,h);plus50=Math.max(0,h-8);pay=plus50*rate*1.5;}
+    return {hours:h,regular,plus50,plus100,pay};
+  }
+  function monthEntries(){
+    const m=monthInput.value||monthNow;
+    return entries.filter(x=>String(x.date||'').slice(0,7)===m).sort((a,b)=>a.date.localeCompare(b.date));
+  }
+  function monthTotals(items){
+    return items.reduce((t,x)=>{const c=calc(x);t.hours+=c.hours;t.regular+=c.regular;t.plus50+=c.plus50;t.plus100+=c.plus100;t.pay+=c.pay;return t;},{hours:0,regular:0,plus50:0,plus100:0,pay:0});
+  }
+  function fmtHours(n){return `${(Math.round((n||0)*100)/100).toLocaleString('pl-PL',{maximumFractionDigits:2})} h`;}
+  function renderCalendar(){
+    const m=monthInput.value||monthNow, [y,mo]=m.split('-').map(Number);
+    const first=new Date(y,mo-1,1,12), offset=(first.getDay()+6)%7;
+    const start=new Date(y,mo-1,1-offset,12);
+    const grid=$('work-calendar');let html='';
+    const byDate=new Map(entries.map(x=>[x.date,x]));
+    for(let i=0;i<42;i++){
+      const d=new Date(start);d.setDate(start.getDate()+i);
+      const ds=dateStr(d), inMonth=d.getMonth()===mo-1, item=byDate.get(ds), c=item?calc(item):null;
+      const classes=['work-day',!inMonth?'outside':'',item?'has-entry':'',d.getDay()===6?'saturday':'',d.getDay()===0?'sunday':'',ds===today?'today':''].filter(Boolean).join(' ');
+      html+=`<button type="button" class="${classes}" data-work-day="${ds}" ${!inMonth?'tabindex="-1"':''}><span class="work-day-num">${d.getDate()}</span>${item?`<span class="work-day-hours">${fmtHours(c.hours)}</span><span class="work-day-pay">${money(c.pay)}</span>`:''}</button>`;
+    }
+    grid.innerHTML=html;
+    const items=monthEntries(), t=monthTotals(items);
+    $('work-month-note').textContent=`${items.length} ${items.length===1?'wpis':items.length>1&&items.length<5?'wpisy':'wpisów'} · ${fmtHours(t.hours)} łącznie`;
+  }
+  function render(){
+    const items=monthEntries(), t=monthTotals(items), days=items.filter(x=>getHours(x)>0).length;
+    const bonus=days?Number(settings.monthlyBonus)||0:0;
+    $('work-total-hours').textContent=fmtHours(t.hours);
+    $('work-days-count').textContent=`${days} ${days===1?'dzień pracy':days>1&&days<5?'dni pracy':'dni pracy'}`;
+    $('work-premium-hours').textContent=fmtHours(t.plus50+t.plus100);
+    $('work-premium-note').textContent=`42 zł/h: ${fmtHours(t.plus50)} · 56 zł/h: ${fmtHours(t.plus100)}`;
+    $('work-total-pay').textContent=money(t.pay+bonus);
+    $('work-pay-note').textContent=`Dodatki ${money(t.pay)} + premia ${money(bonus)} · bez pensji etatowej`;
+    $('work-month-label').textContent=items.length?new Intl.DateTimeFormat('pl-PL',{month:'long',year:'numeric'}).format(dateObj(monthInput.value+'-01')):'Brak wpisów';
+    $('work-breakdown').innerHTML=[
+      ['Godziny podstawowe',fmtHours(t.regular)],
+      ['Godziny płatne 150% (42 zł/h)',fmtHours(t.plus50)],
+      ['Godziny płatne 200% (56 zł/h)',fmtHours(t.plus100)],
+      ['Wynagrodzenie za nadgodziny i weekendy',money(t.pay)],
+      ['Premia miesięczna',money(bonus)],
+      ['Łącznie dodatkowo do pensji',money(t.pay+bonus)]
+    ].map(([a,b])=>`<div><span>${a}</span><strong>${b}</strong></div>`).join('');
+    $('work-entry-list').innerHTML=items.length?items.slice().reverse().map(x=>{
+      const c=calc(x),day=dateObj(x.date).getDay();
+      const label=day===6?'Sobota · 42 zł/h':day===0?'Niedziela · 56 zł/h':c.plus50>0?'Nadgodziny · 42 zł/h':'Dzień roboczy · bez dodatku';
+      const time=x.start&&x.end?`${x.start}–${x.end}${x.breakMinutes?` · przerwa ${x.breakMinutes} min`:''}`:'Wpisana łączna liczba godzin';
+      return `<div class="work-entry"><div class="work-entry-main"><strong>${esc(x.date)} · ${fmtHours(c.hours)}</strong><small>${esc(label)} · ${esc(time)}${x.comment?' · '+esc(x.comment):''}</small></div><div class="work-entry-side"><strong>${money(c.pay)}</strong><div><button type="button" data-work-edit="${esc(x.id)}">Edytuj</button> <button type="button" data-work-delete="${esc(x.id)}">Usuń</button></div></div></div>`;
+    }).join(''):'<p class="muted">Brak wpisów w tym miesiącu.</p>';
+    renderCalendar();
+  }
+  function resetForm(){
+    $('work-form').reset();$('work-date').value=today;$('work-break').value='0';
+    $('work-edit-id').value='';editingId='';$('work-form-title').textContent='Dodaj dzień pracy';
+    $('work-submit').textContent='+ Zapisz dzień';$('work-cancel').hidden=true;
+  }
+  function editEntry(id){
+    const x=entries.find(v=>String(v.id)===String(id));if(!x)return;
+    editingId=String(x.id);$('work-edit-id').value=editingId;$('work-date').value=x.date;
+    $('work-start').value=x.start||'';$('work-end').value=x.end||'';
+    $('work-break').value=x.breakMinutes||0;$('work-hours-direct').value=x.hours||'';
+    $('work-comment').value=x.comment||'';$('work-form-title').textContent='Edytuj dzień pracy';
+    $('work-submit').textContent='Zapisz zmiany';$('work-cancel').hidden=false;
+    $('work-form').scrollIntoView({behavior:'smooth',block:'center'});
+  }
+  $('work-form').addEventListener('submit',e=>{
+    e.preventDefault();
+    const date=$('work-date').value,start=$('work-start').value,end=$('work-end').value;
+    const directRaw=$('work-hours-direct').value.trim(), direct=directRaw===''?0:Number(directRaw.replace(',','.'));
+    const br=Number($('work-break').value)||0;
+    if(!date){alert('Wybierz datę.');return;}
+    if(directRaw!==''&&(!Number.isFinite(direct)||direct<=0||direct>24)){alert('Podaj prawidłową liczbę godzin (od 0,01 do 24).');return;}
+    if(directRaw===''&&(!start||!end)){alert('Wpisz godziny od–do albo łączną liczbę godzin.');return;}
+    if(directRaw===''&&start===end){alert('Godzina rozpoczęcia i zakończenia nie mogą być takie same.');return;}
+    const item={id:editingId||`work-${Date.now()}`,date,start,directHours:direct,hours:direct||0,end,breakMinutes:br,comment:$('work-comment').value.trim()};
+    // W przypadku wpisania godzin od–do wyliczenie odbywa się przy odczycie; pole hours pozostaje zerowe.
+    if(!direct)item.hours=0;
+    if(editingId)entries=entries.map(x=>String(x.id)===editingId?item:x);
+    else {
+      const existing=entries.find(x=>x.date===date);
+      if(existing){
+        if(!confirm('Ten dzień ma już wpis. Zastąpić go nowymi danymi?'))return;
+        entries=entries.map(x=>x.date===date?{...item,id:x.id}:x);
+      } else entries.push(item);
+    }
+    persistEntries();resetForm();render();
+  });
+  $('work-cancel').addEventListener('click',resetForm);
+  $('work-calendar').addEventListener('click',e=>{
+    const b=e.target.closest('[data-work-day]');if(!b||b.classList.contains('outside'))return;
+    const item=entries.find(x=>x.date===b.dataset.workDay);
+    if(item)editEntry(item.id);else{$('work-date').value=b.dataset.workDay;$('work-start').focus();}
+  });
+  $('work-entry-list').addEventListener('click',e=>{
+    const ed=e.target.closest('[data-work-edit]');if(ed){editEntry(ed.dataset.workEdit);return;}
+    const del=e.target.closest('[data-work-delete]');if(!del)return;
+    if(!confirm('Usunąć wpis z tego dnia?'))return;
+    entries=entries.filter(x=>String(x.id)!==del.dataset.workDelete);persistEntries();render();
+  });
+  $('work-prev-month').addEventListener('click',()=>{const d=dateObj(monthInput.value+'-01');d.setMonth(d.getMonth()-1);monthInput.value=`${d.getFullYear()}-${pad(d.getMonth()+1)}`;render();});
+  $('work-next-month').addEventListener('click',()=>{const d=dateObj(monthInput.value+'-01');d.setMonth(d.getMonth()+1);monthInput.value=`${d.getFullYear()}-${pad(d.getMonth()+1)}`;render();});
+  monthInput.addEventListener('change',render);
+  $('work-settings-form').addEventListener('submit',e=>{
+    e.preventDefault();const rate=Number($('work-rate').value),bonus=Number($('work-bonus').value);
+    if(!Number.isFinite(rate)||rate<=0||!Number.isFinite(bonus)||bonus<0){alert('Sprawdź stawkę godzinową i premię.');return;}
+    settings={hourlyRate:Math.round(rate*100)/100,monthlyBonus:Math.round(bonus*100)/100};
+    persistSettings();render();alert('Zapisano ustawienia wynagrodzenia.');
+  });
+  render();
+})();
+</script>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function () {
@@ -2454,4 +2694,54 @@ hr{border-color:#3c493b!important;opacity:.9}
 @media(max-width:700px){#panel-habits .top{padding:19px 17px 20px!important;border-radius:18px!important}#panel-habits .top:before{right:-145px;opacity:.65}}
 @media(prefers-reduced-motion:no-preference){.app-tab,.module-card,#panel-habits .habit{transition:background .22s ease,border-color .22s ease,box-shadow .22s ease,transform .22s ease}.module-card:hover{transform:translateY(-2px)}}
 </style>
+
+<style id="work-module-styles">
+#panel-work .module-head{margin-bottom:18px}
+#panel-work .work-summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 14px}
+#panel-work .work-stat{padding:16px 18px;display:flex;flex-direction:column;gap:7px;min-width:0}
+#panel-work .work-stat>span{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#aab8a7}
+#panel-work .work-stat>strong{font-size:clamp(22px,3vw,30px);line-height:1.1;color:#d0ed83;font-weight:850;font-variant-numeric:tabular-nums}
+#panel-work .work-stat>small{font-size:11px;color:#9eac9c}
+#panel-work .work-pay{border-color:#71834b}
+#panel-work .work-pay>strong{color:#e8c477}
+#panel-work .work-layout{grid-template-columns:minmax(280px,.8fr) minmax(0,1.2fr);align-items:start}
+#panel-work .work-form-divider{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#c5d58e;border-top:1px solid #3c493b;padding-top:12px}
+#panel-work .work-weekdays,#panel-work .work-calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+#panel-work .work-weekdays{margin:14px 0 7px}
+#panel-work .work-weekdays span{text-align:center;color:#9eae9d;font-size:10px;font-weight:800;padding:5px 0}
+#panel-work .work-day{min-width:0;min-height:76px;padding:7px 5px;border:1px solid #3d4c3d;border-radius:9px;background:#18221a;color:#e8eee5;text-align:left;display:flex;flex-direction:column;gap:5px;cursor:pointer}
+#panel-work .work-day:hover{border-color:#8da65a;background:#243126}
+#panel-work .work-day.outside{opacity:.24;cursor:default}
+#panel-work .work-day.today{outline:2px solid #e8c477;outline-offset:-2px}
+#panel-work .work-day.has-entry{background:linear-gradient(145deg,#2c3d29,#1e2c21);border-color:#718b4c}
+#panel-work .work-day.saturday.has-entry{background:linear-gradient(145deg,#3c3422,#28271d);border-color:#a17c43}
+#panel-work .work-day.sunday.has-entry{background:linear-gradient(145deg,#422c28,#2a211e);border-color:#a56757}
+#panel-work .work-day-num{font-size:12px;font-weight:850}
+#panel-work .work-day-hours{font-size:11px;font-weight:800;color:#d0ed83;overflow-wrap:anywhere}
+#panel-work .work-day-pay{font-size:9px;color:#b8c5b1;overflow-wrap:anywhere}
+#panel-work .work-day.outside .work-day-hours,#panel-work .work-day.outside .work-day-pay{display:none}
+#panel-work .work-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:11px;color:#aab7a6;font-size:10px}
+#panel-work .work-legend span{display:flex;align-items:center;gap:6px}
+#panel-work .work-legend i{width:9px;height:9px;border-radius:3px;background:#718b4c}
+#panel-work .work-legend span:nth-child(2) i{background:#a17c43}
+#panel-work .work-legend span:nth-child(3) i{background:#a56757}
+#panel-work .work-breakdown{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:12px 0 18px}
+#panel-work .work-breakdown>div{background:#172019;border:1px solid #3b4939;border-radius:12px;padding:12px;min-width:0}
+#panel-work .work-breakdown span{display:block;font-size:10px;color:#a8b5a3;margin-bottom:6px}
+#panel-work .work-breakdown strong{font-size:17px;color:#eef3e8;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+#panel-work .work-entry{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid #354235}
+#panel-work .work-entry:last-child{border-bottom:0}
+#panel-work .work-entry-main{min-width:0}
+#panel-work .work-entry-main strong{display:block;color:#edf2e8}
+#panel-work .work-entry-main small{display:block;color:#a8b5a3;margin-top:4px;overflow-wrap:anywhere}
+#panel-work .work-entry-side{text-align:right;white-space:nowrap}
+#panel-work .work-entry-side strong{display:block;color:#d0ed83}
+#panel-work .work-entry-side button{margin-top:5px}
+#panel-work .work-settings{margin-top:14px;padding:15px 18px}
+#panel-work .work-settings summary{cursor:pointer;font-weight:800;color:#d5e4c8}
+#panel-work .work-settings form{margin-top:14px}
+@media(max-width:760px){#panel-work .work-layout{grid-template-columns:1fr}#panel-work .work-summary-grid{grid-template-columns:1fr 1fr}#panel-work .work-pay{grid-column:1/-1}}
+@media(max-width:480px){#panel-work .work-summary-grid{gap:7px}#panel-work .work-stat{padding:12px}#panel-work .work-stat>strong{font-size:22px}#panel-work .work-day{min-height:61px;padding:5px 3px;gap:3px}#panel-work .work-day-hours{font-size:9px}#panel-work .work-day-pay{font-size:8px}#panel-work .work-calendar{gap:3px}#panel-work .work-breakdown{grid-template-columns:1fr 1fr}#panel-work .work-entry{align-items:flex-start}}
+</style>
+
 </body></html>
