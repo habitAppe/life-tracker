@@ -477,6 +477,43 @@ body { background-color:#101412; color:#e7eee9; }
 @media(prefers-reduced-motion:reduce){.module-card,.entry,.action,.app-tab,#panel-habits .habit{transition:none!important}}
 </style>
 
+
+<style id="lifetracker-color-refinement">
+/* Final palette refinement: natural mineral tones, less white and less visual sameness */
+/* Habits: deep forest titles, muted botanical progress fills, warm neutral tracks */
+#panel-habits .hh h3,
+#panel-habits .top h1,
+#panel-habits .sum .big,
+#panel-habits .mp { color:#244b3b; }
+#panel-habits .hh h3 { font-weight:750; }
+#panel-habits .habit:nth-child(6n+1) .bar i { background:linear-gradient(90deg,#397e63,#75ad8e); }
+#panel-habits .habit:nth-child(6n+2) .bar i { background:linear-gradient(90deg,#527c9d,#8eafc8); }
+#panel-habits .habit:nth-child(6n+3) .bar i { background:linear-gradient(90deg,#b18445,#d7b77c); }
+#panel-habits .habit:nth-child(6n+4) .bar i { background:linear-gradient(90deg,#9274a8,#b7a0c9); }
+#panel-habits .habit:nth-child(6n+5) .bar i { background:linear-gradient(90deg,#b87568,#d9a095); }
+#panel-habits .habit:nth-child(6n) .bar i { background:linear-gradient(90deg,#568c91,#91b9b6); }
+#panel-habits .bar { background:#e8e8df; border:1px solid #d9ded4; }
+#panel-habits .pct { color:#426b58; }
+#panel-habits .count { color:#294b3c; }
+#panel-habits .habit-tag { color:#52675b; background:#f0f4ef; border-color:#d6e0d6; }
+#panel-habits .summaries .sum:first-child .big { color:#287455; }
+#panel-habits .summaries .sum:last-child .big { color:#527b9c; }
+/* Budget: warm ivory/sage text accents and differentiated progress bars */
+#panel-budget .goal-card-head strong { color:#d8e8dc; }
+#panel-budget .goal-amount { color:#a9d6bd; }
+#panel-budget .goal-track { background:#29372f; border:1px solid #3b4b40; }
+#panel-budget .goal-track:not(.debt) i { background:linear-gradient(90deg,#4f9a78,#9bc9a7); }
+#panel-budget .goal-track.debt i { background:linear-gradient(90deg,#bd9457,#d8ad76); }
+#panel-budget .goal-foot { color:#aebdb2; }
+#panel-budget .subheading { color:#c6d8cb; }
+#panel-budget .category-bar { background:#29372f; }
+#panel-budget .category-bar i { background:linear-gradient(90deg,#5a9b7b,#91b8a0); }
+/* Keep the rest of the interface on a calm, consistent forest palette */
+.module-card h2 { color:#dce9df; }
+.app-tab.active { background:#5eae8a; border-color:#5eae8a; color:#102019; }
+.fit-detail-chart polyline { stroke:#c98570!important; }
+</style>
+
 </head><body>
 <title>Karta nawyków</title>
 <meta name="claude:viewport-fit-sides" content="cover">
