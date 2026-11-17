@@ -828,7 +828,10 @@ details.tbl .tw { overflow-x: auto; }
 <div class="wrap" id="app">
   <header class="top">
     <h1><input type="text" id="title" class="title" maxlength="40" value="Karta nawyków" aria-label="Nazwa karty" spellcheck="false" autocomplete="off"></h1>
-    <div class="sync" id="sync" role="status"></div>
+    <div class="top-actions">
+      <button id="app-refresh" type="button" class="app-refresh" aria-label="Odśwież aplikację" title="Odśwież aplikację">↻ <span>Odśwież</span></button>
+      <div class="sync" id="sync" role="status"></div>
+    </div>
   </header>
   <div class="ctl" id="ctl"></div>
   <div id="banner"></div>
@@ -2774,4 +2777,16 @@ hr{border-color:#3c493b!important;opacity:.9}
 @media(max-width:480px){#panel-work .work-summary-grid{gap:7px}#panel-work .work-stat{padding:12px}#panel-work .work-stat>strong{font-size:22px}#panel-work .work-day{min-height:61px;padding:5px 3px;gap:3px}#panel-work .work-day-hours{font-size:9px}#panel-work .work-day-pay{display:none}#panel-work .work-calendar{gap:3px}#panel-work .work-breakdown{grid-template-columns:1fr 1fr}#panel-work .work-entry{align-items:flex-start}}
 </style>
 
+
+<style id="mobile-refresh-style">
+.top-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.app-refresh{min-height:42px;padding:8px 13px;border:1px solid #718b4c;border-radius:11px;background:linear-gradient(135deg,#35472c,#263629);color:#e5f2cf;font:700 13px Inter, sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:7px;touch-action:manipulation}
+.app-refresh:active{transform:scale(.97)}
+.app-refresh:disabled{opacity:.65;cursor:wait}
+.app-refresh:first-letter{font-size:19px}
+@media(max-width:600px){.top-actions{width:100%;justify-content:space-between}.app-refresh{min-width:44px;justify-content:center}.app-refresh span{display:inline}}
+</style>
+<script id="mobile-refresh-handler">
+(()=>{const button=document.getElementById('app-refresh');if(!button)return;button.addEventListener('click',()=>{button.disabled=true;button.querySelector('span').textContent='Odświeżanie…';window.location.reload();});})();
+</script>
 </body></html>
