@@ -589,6 +589,63 @@ body { background-color:#101412; color:#e7eee9; }
 #panel-budget .pool-goals .goal-card{background:rgba(10,17,12,.46)!important;border-color:#46563e!important}
 @media(max-width:520px){#panel-budget .pool-head>strong{font-size:16px}#panel-budget .pool-foot{font-size:10px}}
 </style>
+
+<style id="lifetracker-design-refresh-2026">
+/* LifeTracker — spójny, bardziej dopracowany interfejs */
+:root{--lt-bg:#0d1410;--lt-panel:#17221b;--lt-panel-hi:#1c2a21;--lt-edge:#304337;--lt-text:#edf4ee;--lt-muted:#a8b8ac;--lt-accent:#79c6a0;--lt-glow:rgba(121,198,160,.16)}
+html{background:var(--lt-bg);scroll-behavior:smooth}
+body{background:radial-gradient(ellipse at 12% 0%,rgba(76,132,94,.13),transparent 34rem),radial-gradient(ellipse at 90% 18%,rgba(83,116,151,.10),transparent 32rem),var(--lt-bg);color:var(--lt-text)}
+.appnav{position:sticky;top:0;z-index:50;justify-content:center;gap:9px;padding:12px max(12px,calc((100vw - 1080px)/2));background:rgba(13,20,16,.88);border-bottom:1px solid rgba(120,157,132,.2);backdrop-filter:blur(18px)}
+.app-tab{min-width:104px;border-radius:12px;background:rgba(29,42,33,.8);border-color:#35483a;color:#b8c7bc;letter-spacing:.075em;font-size:11px;transition:all .18s ease}
+.app-tab.active{background:linear-gradient(135deg,#8bd2aa,#5da982);border-color:#8bd2aa;color:#102017;box-shadow:0 5px 20px rgba(101,184,137,.2)}
+.module-wrap{max-width:1080px;padding-top:34px;padding-bottom:64px}
+.module-head{margin-bottom:26px}.module-head h1{font-size:clamp(30px,5vw,43px);line-height:1.08;letter-spacing:-.05em}.eyebrow{letter-spacing:.19em;color:#8bd2aa}
+.module-card{background:linear-gradient(145deg,rgba(29,43,34,.97),rgba(20,29,23,.98));border:1px solid rgba(117,151,126,.28);border-radius:19px;padding:21px;box-shadow:0 14px 36px rgba(0,0,0,.17),inset 0 1px rgba(255,255,255,.025)}
+.module-card h2{font-size:19px;letter-spacing:-.035em}.module-grid{gap:16px;margin-bottom:16px}
+.form-grid{gap:14px}.form-grid label,.month-picker{line-height:1.35;color:#b6c5b9}.form-grid input,.form-grid select,.form-grid textarea,.month-picker input{border-radius:11px;background:#101912;border-color:#3b5142;min-height:44px}.form-grid input:focus,.form-grid select:focus,.form-grid textarea:focus{outline:0;border-color:#82cba2;box-shadow:0 0 0 3px rgba(130,203,162,.13)}
+.action{border-radius:11px;background:#202e24;border-color:#405646;min-height:43px}.action.primary{background:linear-gradient(135deg,#8bd2aa,#61ad83);border-color:#8bd2aa;color:#102017;font-weight:750}.action:focus-visible,.app-tab:focus-visible{outline:3px solid #a2dfb8;outline-offset:3px}
+.stats-grid{gap:11px}.stat{border-radius:14px;background:linear-gradient(145deg,#111b14,#1a281e);border-color:#34483a;padding:15px}.stat span{letter-spacing:.025em}.stat strong{letter-spacing:-.035em}
+.entry{border-radius:13px;background:#111a14;border-color:#304237;padding:14px}.goal-card{border-radius:15px;background:linear-gradient(145deg,#111b14,#1b2a20);border-color:#354b3b;padding:16px}
+#panel-habits .wrap{max-width:1080px;padding-top:30px;padding-bottom:60px}
+#panel-habits .top{align-items:center;gap:14px;margin-bottom:23px}
+#panel-habits .habit{border-radius:18px;padding:17px;gap:13px;box-shadow:0 12px 28px rgba(0,0,0,.18),inset 0 1px rgba(255,255,255,.025)}
+#panel-habits .summaries{gap:12px;margin-bottom:16px}
+#panel-habits .sum{border-radius:16px;padding:17px 19px}
+#panel-habits .days{gap:7px}
+#panel-habits .day{min-height:64px;border-radius:11px;overflow:hidden;padding:7px 4px 9px;gap:3px}
+#panel-habits .day .dn{font-size:10px;letter-spacing:.035em;line-height:1.2}
+#panel-habits .day .dd{font-size:16px;line-height:1.1}
+/* Checkmark is moved to the lower-right corner; weekday abbreviations remain unobstructed. */
+#panel-habits .day .ck{top:auto!important;right:7px!important;bottom:6px!important;width:13px!important;height:13px!important;opacity:.95}
+#panel-habits .day[aria-pressed="true"] .dn{opacity:1}
+#panel-habits .cc .ck{top:2px;right:2px;width:9px;height:9px}
+#panel-habits .lt-achievement{display:flex;align-items:center;gap:14px;min-width:0;padding:15px 17px;border:1px solid #536044;border-radius:16px;background:linear-gradient(115deg,#20291f,#18251d 72%);box-shadow:0 9px 24px rgba(0,0,0,.15)}
+#panel-habits .lt-achievement-icon{width:43px;height:43px;flex:0 0 43px;display:grid;place-items:center;border-radius:13px;background:#344333;color:#c5d2a0;font-size:25px}
+#panel-habits .lt-achievement-copy{display:grid;gap:3px;min-width:0;flex:1}
+#panel-habits .lt-achievement-kicker{font-size:9px;font-weight:850;letter-spacing:.16em;color:#b9c995}
+#panel-habits .lt-achievement-copy strong{font-size:15px;letter-spacing:-.02em;color:#f0f4e7}
+#panel-habits .lt-achievement-copy>span:last-child{font-size:11px;line-height:1.4;color:#b7c3b2}
+#panel-habits .lt-achievement-score{font-size:17px;font-weight:850;white-space:nowrap;color:#d0d7ae;font-variant-numeric:tabular-nums}
+#panel-habits .lt-achievement.is-unlocked{border-color:#83bd91;background:linear-gradient(115deg,#263e2d,#1b3023 72%);box-shadow:0 0 0 1px rgba(131,189,145,.12),0 10px 28px rgba(0,0,0,.2)}
+#panel-habits .lt-achievement.is-unlocked .lt-achievement-icon{background:linear-gradient(135deg,#e2d69b,#a6c88e);color:#203322;box-shadow:0 0 20px rgba(205,220,151,.15)}
+#panel-habits .lt-achievement.is-unlocked .lt-achievement-kicker{color:#a9e2b2}
+#panel-habits .lt-achievement.is-unlocked .lt-achievement-score{color:#b8e9bf}
+#panel-fitness .fit-calendar{border-radius:19px}
+#panel-fitness .fit-day{border-radius:10px}
+#panel-budget .goal-card{box-shadow:0 8px 22px rgba(0,0,0,.15)}
+#panel-work .module-card{border-radius:17px}
+button{ -webkit-tap-highlight-color:transparent }
+@media(max-width:700px){
+ .appnav{gap:5px;padding:8px 7px}.app-tab{min-width:0;flex:1;padding:10px 4px;font-size:10px;letter-spacing:.04em}
+ .module-wrap{padding:20px 11px 45px}.module-card{padding:16px;border-radius:15px}.module-grid{gap:12px}
+ #panel-habits .wrap{padding:18px 11px 45px}#panel-habits .day{min-height:60px;padding:6px 2px 9px}
+ #panel-habits .lt-achievement{gap:10px;padding:12px}.lt-achievement-icon{width:38px;height:38px;flex-basis:38px!important}
+ #panel-habits .lt-achievement-copy strong{font-size:13px}#panel-habits .lt-achievement-copy>span:last-child{font-size:10px}#panel-habits .lt-achievement-score{font-size:15px}
+}
+@media(max-width:380px){#panel-habits .days{gap:4px}#panel-habits .day{min-height:56px}#panel-habits .day .dn{font-size:9px}#panel-habits .day .dd{font-size:14px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition:none!important}}
+</style>
+
 </head><body>
 <title>Karta nawyków</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -1373,10 +1430,18 @@ function weightedStats(habits, getStats) {
 function dualSummary(stats, label, detail) {
   var allPct = stats.allPlanned ? stats.allDone / stats.allPlanned : null;
   var healthPct = stats.healthPlanned ? stats.healthDone / stats.healthPlanned : null;
+  var pct = allPct == null ? 0 : Math.round(allPct * 100);
+  var unlocked = allPct != null && allPct >= 0.85;
+  var reward = '<section class="lt-achievement' + (unlocked ? ' is-unlocked' : '') + '" role="status" aria-live="polite">' +
+    '<div class="lt-achievement-icon" aria-hidden="true">' + (unlocked ? '★' : '✦') + '</div>' +
+    '<div class="lt-achievement-copy"><span class="lt-achievement-kicker">OSIĄGNIĘCIE · ' + (unlocked ? 'ODBLOKOWANE' : 'CEL DO ZDOBYCIA') + '</span>' +
+    '<strong>' + (unlocked ? '85% CLUB — Mistrz konsekwencji' : '85% CLUB — Mistrz konsekwencji') + '</strong>' +
+    '<span>' + (unlocked ? 'Gratulacje! Osiągnąłeś minimum 85% realizacji planu w tym okresie.' : (allPct == null ? 'Dodaj nawyki i zacznij budować swój wynik.' : 'Jeszcze ' + (85 - pct) + ' p.p. do odblokowania odznaki.')) + '</span></div>' +
+    '<div class="lt-achievement-score">' + (unlocked ? '85%+' : pct + '%') + '</div></section>';
   return '<div class="summaries">' +
     summary('Overall Progress · ' + label, allPct, stats.allDone + ' z ' + stats.allPlanned + ' ważonych punktów') +
     summary('HEALTH Progress · ' + label, healthPct, stats.healthPlanned ? stats.healthDone + ' z ' + stats.healthPlanned + ' ważonych punktów' : 'Brak nawyków w kategorii HEALTH') +
-    '</div>';
+    reward + '</div>';
 }
 function periodSub(done, planned, met, weeks) {
   return planned ? done + ' z ' + planned + ' zaplanowanych razy, ' + met + ' z ' + weeks + ' tygodni z celem' : 'Brak zakończonych tygodni w tym okresie';
