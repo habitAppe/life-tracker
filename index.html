@@ -2337,10 +2337,12 @@ window.addEventListener('hashchange', function () {
       ['Łącznie dodatkowo do pensji',money(t.pay+bonus)]
     ].map(([a,b])=>`<div><span>${a}</span><strong>${b}</strong></div>`).join('');
     $('work-entry-list').innerHTML=items.length?items.slice().reverse().map(x=>{
-      const c=calc(x),day=dateObj(x.date).getDay();
-      const label=day===6?'Sobota':day===0?'Niedziela':c.plus50>0?'Nadgodziny':'Dzień roboczy';
-      const time=x.start&&x.end?`${x.start}–${x.end}${x.breakMinutes?` · przerwa ${x.breakMinutes} min`:''}`:'Wpisane godziny od–do';
-      return `<div class="work-entry"><div class="work-entry-main"><strong>${esc(x.date)} · ${fmtHours(c.hours)}</strong><small>${esc(label)} · ${esc(time)}${x.comment?' · '+esc(x.comment):''}</small></div><div class="work-entry-side"><div><button type="button" data-work-edit="${esc(x.id)}">Edytuj</button> <button type="button" data-work-delete="${esc(x.id)}">Usuń</button></div></div></div>`;
+      const c=calc(x);
+      const details=[];
+      if(x.start&&x.end)details.push(`${x.start}–${x.end}`);
+      if(Number(x.breakMinutes)>0)details.push(`Przerwa ${Number(x.breakMinutes)} min`);
+      if(x.comment)details.push(esc(x.comment));
+      return `<div class="work-entry"><div class="work-entry-main"><strong><span>${esc(x.date)}</span><b>${fmtHours(c.hours)}</b></strong>${details.length?`<small>${details.join(' <span class="work-entry-separator">·</span> ')}</small>`:''}</div><div class="work-entry-side"><div><button type="button" data-work-edit="${esc(x.id)}">Edytuj</button> <button type="button" data-work-delete="${esc(x.id)}">Usuń</button></div></div></div>`;
     }).join(''):'<p class="muted">Brak wpisów w tym miesiącu.</p>';
     renderCalendar();
   }
@@ -3012,6 +3014,21 @@ input,select,textarea{accent-color:var(--lt-accent)}
 @media(max-width:480px){
   #panel-work .work-pay summary{min-height:54px;padding:12px 13px;}
   #panel-work .work-pay .work-pay-title{font-size:13px;}
+}
+/* Czytelniejsza lista przepracowanych dni: data, czas pracy i tylko istotne szczegóły. */
+#panel-work .work-entry{padding:15px 2px;gap:16px;}
+#panel-work .work-entry-main{flex:1;}
+#panel-work .work-entry-main>strong{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:14px;font-weight:750;line-height:1.35;}
+#panel-work .work-entry-main>strong b{flex:0 0 auto;padding:5px 9px;border:1px solid #536b3c;border-radius:8px;background:#263522;color:#d5ef91;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;}
+#panel-work .work-entry-main>small{margin-top:7px;color:#c0cdb9;font-size:12px;line-height:1.55;}
+#panel-work .work-entry-separator{padding:0 4px;color:#829477;}
+#panel-work .work-entry-side button{padding:7px 10px;font-size:11px;}
+@media(max-width:480px){
+  #panel-work .work-entry{gap:8px;padding:13px 0;}
+  #panel-work .work-entry-main>strong{font-size:13px;}
+  #panel-work .work-entry-main>strong b{font-size:12px;padding:4px 7px;}
+  #panel-work .work-entry-main>small{font-size:11px;}
+  #panel-work .work-entry-side button{padding:6px 8px;}
 }
 </style>
 </body></html>
