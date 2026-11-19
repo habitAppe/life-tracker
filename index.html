@@ -646,6 +646,46 @@ button{ -webkit-tap-highlight-color:transparent }
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition:none!important}}
 </style>
 
+
+<style id="fitness-weight-tracker">
+#panel-fitness .weight-card{margin-top:16px;overflow:hidden;background:linear-gradient(145deg,#202e29,#17221d)!important;border-color:#3e5b4c!important}
+#panel-fitness .weight-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+#panel-fitness .weight-head h2{margin:0 0 5px;font-size:20px;color:#edf6ef}
+#panel-fitness .weight-head .eyebrow{margin:0 0 5px}
+#panel-fitness .weight-current{flex:0 0 auto;min-width:132px;padding:12px 15px;border:1px solid #45664f;border-radius:13px;background:rgba(112,226,183,.08);text-align:right}
+#panel-fitness .weight-current span,#panel-fitness .weight-current small{display:block;color:#a8b9ad;font-size:10px}
+#panel-fitness .weight-current strong{display:block;margin:3px 0;color:#c5f36a;font-size:23px;line-height:1.15}
+#panel-fitness .weight-form{display:grid;grid-template-columns:minmax(130px,1fr) minmax(130px,1fr) auto auto;gap:10px;align-items:end}
+#panel-fitness .weight-form label{display:grid;gap:6px;color:#b9c9bd;font-size:12px;font-weight:650}
+#panel-fitness .weight-form input{width:100%;min-height:43px;box-sizing:border-box;padding:10px 12px;border:1px solid #40584a;border-radius:10px;background:#111b15;color:#f0f7f1;font:inherit;font-size:16px;outline:none}
+#panel-fitness .weight-form input:focus{border-color:#70d9a9;box-shadow:0 0 0 3px rgba(112,217,169,.13)}
+#panel-fitness .weight-form button{min-height:43px;white-space:nowrap}
+#panel-fitness .weight-help{margin:9px 0 17px;font-size:11px}
+#panel-fitness .weight-chart-wrap{padding:16px 16px 10px;border:1px solid #354d40;border-radius:15px;background:linear-gradient(150deg,#131e18,#111914)}
+#panel-fitness .weight-chart-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+#panel-fitness .weight-chart-title strong{display:block;color:#e8f3eb;font-size:14px}
+#panel-fitness .weight-chart-title span:not(.weight-trend){display:block;margin-top:3px;color:#91a398;font-size:10px}
+#panel-fitness .weight-trend{padding:6px 10px;border:1px solid #3c6049;border-radius:20px;background:#1c3023;color:#c5f36a;font-size:12px;font-weight:800;white-space:nowrap}
+#panel-fitness .weight-chart{width:100%;min-height:190px}
+#panel-fitness .weight-chart svg{display:block;width:100%;height:auto;overflow:visible}
+#panel-fitness .weight-chart .weight-grid{stroke:#2d4035;stroke-width:1;stroke-dasharray:3 5}
+#panel-fitness .weight-chart .weight-axis{fill:#8fa296;font-size:10px}
+#panel-fitness .weight-chart .weight-area{fill:url(#weightAreaGradient)}
+#panel-fitness .weight-chart .weight-line{fill:none;stroke:#80dfa9;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+#panel-fitness .weight-chart .weight-point{fill:#c5f36a;stroke:#17251c;stroke-width:3}
+#panel-fitness .weight-chart .weight-empty{display:grid;place-items:center;min-height:175px;color:#8fa296;font-size:12px;text-align:center}
+#panel-fitness .weight-history-head{display:flex;justify-content:space-between;align-items:center;margin:17px 0 8px;color:#e5eee7;font-size:13px}
+#panel-fitness .weight-history{display:grid;gap:7px}
+#panel-fitness .weight-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid #34483b;border-radius:11px;background:rgba(255,255,255,.025)}
+#panel-fitness .weight-row-main{display:flex;align-items:center;gap:10px;min-width:0}
+#panel-fitness .weight-row-date{color:#aabbb0;font-size:11px}
+#panel-fitness .weight-row-value{color:#eaf4ec;font-size:15px;font-weight:800;white-space:nowrap}
+#panel-fitness .weight-row-actions{display:flex;gap:6px;flex-shrink:0}
+#panel-fitness .weight-row-actions button{padding:5px 8px;border:1px solid #405648;border-radius:7px;background:#1c2921;color:#cbd9ce;font-size:11px;cursor:pointer}
+@media(max-width:620px){#panel-fitness .weight-head{gap:9px}#panel-fitness .weight-current{min-width:105px;padding:10px}#panel-fitness .weight-current strong{font-size:20px}#panel-fitness .weight-form{grid-template-columns:1fr 1fr;gap:9px}#panel-fitness .weight-form button{width:100%}#panel-fitness .weight-chart-wrap{padding:12px 8px 8px}#panel-fitness .weight-chart{min-height:165px}#panel-fitness .weight-row{padding:9px}#panel-fitness .weight-row-actions button{padding:6px}}
+@media(max-width:370px){#panel-fitness .weight-head{display:block}#panel-fitness .weight-current{display:inline-block;margin-top:10px;text-align:left}}
+</style>
+
 </head><body>
 <title>Karta nawyków</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -934,6 +974,25 @@ details.tbl .tw { overflow-x: auto; }
         </div>
       </article>
     </div>
+    <article class="module-card weight-card" aria-labelledby="weight-title">
+      <div class="weight-head">
+        <div><p class="eyebrow">BODY METRICS</p><h2 id="weight-title">Masa ciała</h2><p class="muted small">Dodawaj pomiar, kiedy chcesz — historia i wykres zapisują się na Twoim koncie.</p></div>
+        <div class="weight-current"><span>Ostatni pomiar</span><strong id="weight-latest">—</strong><small id="weight-latest-date">Brak pomiarów</small></div>
+      </div>
+      <form id="weight-form" class="weight-form">
+        <label>Data pomiaru<input id="weight-date" type="date" required></label>
+        <label>Waga (kg)<input id="weight-value" type="text" inputmode="decimal" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="np. 87,5" aria-describedby="weight-input-help" required></label>
+        <button class="action primary" type="submit" id="weight-submit">+ Zapisz pomiar</button>
+        <button class="action" type="button" id="weight-cancel" hidden>Anuluj</button>
+      </form>
+      <p id="weight-input-help" class="muted small weight-help">Możesz wpisać przecinek lub kropkę, np. 87,5 kg. Jeden pomiar na dzień — kolejny zapis tego samego dnia zaktualizuje poprzedni.</p>
+      <div class="weight-chart-wrap">
+        <div class="weight-chart-title"><div><strong>Zmiana masy ciała</strong><span id="weight-chart-subtitle">Historia wszystkich pomiarów</span></div><span class="weight-trend" id="weight-trend">—</span></div>
+        <div id="weight-chart" class="weight-chart" role="img" aria-label="Wykres zmian masy ciała"><div class="weight-empty">Dodaj pierwszy pomiar, aby zobaczyć wykres.</div></div>
+      </div>
+      <div class="weight-history-head"><strong>Historia pomiarów</strong><span class="muted small" id="weight-count">0 wpisów</span></div>
+      <div id="weight-history" class="weight-history"><p class="muted small">Brak zapisanych pomiarów.</p></div>
+    </article>
     <article class="module-card fit-calendar">
       <div class="fit-cal-head">
         <div><h2>Kalendarz aktywności</h2><p id="fit-month-stats" class="fit-month-stats">Wybierz dzień, aby dodać trening.</p></div>
@@ -1806,6 +1865,8 @@ window.addEventListener('hashchange', function () {
     if (window.LifeTrackerStore) window.LifeTrackerStore.write(key, value);
   };
   let workouts = read('workouts', 'life-tracker-fitness-v1');
+  let weightEntries = read('weightEntries', 'life-tracker-weight-v1');
+  let editingWeightId = '';
   let transactions = read('transactions', 'life-tracker-budget-v1');
   let savingsGoals = read('savingsGoals', 'life-tracker-savings-v1');
   let savingsPools = read('savingsPools', 'life-tracker-savings-pools-v1');
@@ -1841,6 +1902,58 @@ window.addEventListener('hashchange', function () {
   function poolTotal(pool){ return Math.round((poolCash(pool)+poolAccount(pool))*100)/100; }
   function normalizePool(pool){ if(pool.cashBalance===undefined) pool.cashBalance=0; if(pool.accountBalance===undefined) pool.accountBalance=Math.max(0,+pool.balance||0); pool.balance=poolTotal(pool); return pool; }
   function saveSavings(){ write('savingsGoals','life-tracker-savings-v1',savingsGoals); write('savingsPools','life-tracker-savings-pools-v1',savingsPools); }
+  // Pomiary masy ciała: osobna kolekcja synchronizowana przez LifeTrackerStore.
+  const weightNumber = value => {
+    const normalized = String(value ?? '').trim().replace(/\s/g,'').replace(',', '.');
+    if (!/^(?:\d+\.?\d*|\.\d+)$/.test(normalized)) return NaN;
+    return Number(normalized);
+  };
+  const weightFmt = value => Number(value).toLocaleString('pl-PL',{minimumFractionDigits:0,maximumFractionDigits:2});
+  function saveWeights(){ write('weightEntries','life-tracker-weight-v1',weightEntries); }
+  function renderWeight(){
+    const sorted=weightEntries.slice().filter(x=>x.date&&Number.isFinite(Number(x.weight))).sort((a,b)=>a.date.localeCompare(b.date));
+    const latest=sorted[sorted.length-1];
+    $('weight-latest').textContent=latest?weightFmt(latest.weight)+' kg':'—';
+    $('weight-latest-date').textContent=latest?new Date(latest.date+'T12:00:00').toLocaleDateString('pl-PL',{day:'numeric',month:'short',year:'numeric'}):'Brak pomiarów';
+    $('weight-count').textContent=sorted.length+' '+(sorted.length===1?'pomiar':(sorted.length%10>=2&&sorted.length%10<=4&&!(sorted.length%100>=12&&sorted.length%100<=14)?'pomiary':'pomiarów'));
+    const trend=$('weight-trend');
+    if(sorted.length>1){const diff=Number(sorted[sorted.length-1].weight)-Number(sorted[0].weight);trend.textContent=(diff>0?'+':'')+weightFmt(diff)+' kg';trend.style.color=diff>0?'#f0bd77':diff<0?'#c5f36a':'#b8c8bc';trend.title='Różnica między pierwszym a ostatnim zapisanym pomiarem';}
+    else {trend.textContent=sorted.length?'Pierwszy pomiar':'—';trend.style.color='#c5f36a';}
+    $('weight-chart-subtitle').textContent=sorted.length?sorted.length+' '+(sorted.length===1?'pomiar':'pomiarów')+' · pełna historia':'Historia wszystkich pomiarów';
+    if(!sorted.length){$('weight-chart').innerHTML='<div class="weight-empty">Dodaj pierwszy pomiar, aby zobaczyć wykres.</div>';}
+    else {
+      const W=760,H=230,L=48,R=18,T=16,B=36,plotW=W-L-R,plotH=H-T-B;
+      const vals=sorted.map(x=>Number(x.weight)); let min=Math.min(...vals),max=Math.max(...vals);
+      let span=max-min; if(span<1) span=1; min=Math.max(0,min-span*.22); max=max+span*.22;
+      const x=i=>L+(sorted.length===1?plotW/2:i/(sorted.length-1)*plotW);
+      const y=v=>T+(max-v)/(max-min)*plotH;
+      const pts=sorted.map((d,i)=>[x(i),y(Number(d.weight))]);
+      const path=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+      const area=path+' L '+pts[pts.length-1][0].toFixed(1)+' '+(T+plotH)+' L '+pts[0][0].toFixed(1)+' '+(T+plotH)+' Z';
+      const grid=[0,1,2,3].map(i=>{const v=max-(max-min)*i/3, yy=T+plotH*i/3;return `<line class="weight-grid" x1="${L}" y1="${yy}" x2="${W-R}" y2="${yy}"/><text class="weight-axis" x="${L-8}" y="${yy+3}" text-anchor="end">${weightFmt(v)}</text>`}).join('');
+      const labels=[...new Set([0,Math.floor((sorted.length-1)/2),sorted.length-1])].map(i=>`<text class="weight-axis" x="${x(i)}" y="${H-10}" text-anchor="${i===0?'start':i===sorted.length-1?'end':'middle'}">${new Date(sorted[i].date+'T12:00:00').toLocaleDateString('pl-PL',{day:'numeric',month:'short'})}</text>`).join('');
+      const circles=pts.map((p,i)=>`<circle class="weight-point" cx="${p[0]}" cy="${p[1]}" r="${sorted.length>35?3.5:5}"><title>${new Date(sorted[i].date+'T12:00:00').toLocaleDateString('pl-PL')} · ${weightFmt(sorted[i].weight)} kg</title></circle>`).join('');
+      $('weight-chart').innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Wykres masy ciała w kilogramach"><defs><linearGradient id="weightAreaGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#80dfa9" stop-opacity=".25"/><stop offset="100%" stop-color="#80dfa9" stop-opacity="0"/></linearGradient></defs>${grid}<path class="weight-area" d="${area}"/><path class="weight-line" d="${path}"/>${circles}${labels}</svg>`;
+    }
+    $('weight-history').innerHTML=sorted.length?sorted.slice().reverse().map(x=>`<div class="weight-row"><div class="weight-row-main"><span class="weight-row-date">${new Date(x.date+'T12:00:00').toLocaleDateString('pl-PL',{weekday:'short',day:'numeric',month:'short',year:'numeric'})}</span><strong class="weight-row-value">${weightFmt(x.weight)} kg</strong></div><div class="weight-row-actions"><button type="button" data-weight-edit="${esc(x.id)}">Edytuj</button><button type="button" data-weight-delete="${esc(x.id)}">Usuń</button></div></div>`).join(''):'<p class="muted small">Brak zapisanych pomiarów.</p>';
+  }
+  function resetWeightForm(){ $('weight-form').reset(); $('weight-date').value=today; $('weight-value').value=''; editingWeightId=''; $('weight-submit').textContent='+ Zapisz pomiar'; $('weight-cancel').hidden=true; }
+  $('weight-date').value=today;
+  $('weight-form').addEventListener('submit',e=>{
+    e.preventDefault(); const date=$('weight-date').value, weight=weightNumber($('weight-value').value);
+    if(!date||!Number.isFinite(weight)||weight<20||weight>400){alert('Wpisz prawidłową wagę od 20 do 400 kg. Możesz użyć przecinka, np. 87,5.');$('weight-value').focus();return;}
+    const existing=weightEntries.find(x=>x.date===date && String(x.id)!==String(editingWeightId));
+    if(existing){if(!confirm('Pomiar z tego dnia już istnieje. Zastąpić go nową wartością?'))return;weightEntries=weightEntries.filter(x=>x!==existing);}
+    if(editingWeightId){weightEntries=weightEntries.map(x=>String(x.id)===String(editingWeightId)?{...x,date,weight:Math.round(weight*100)/100}:x);}
+    else weightEntries.push({id:'weight-'+Date.now(),date,weight:Math.round(weight*100)/100});
+    saveWeights();resetWeightForm();renderWeight();
+  });
+  $('weight-cancel').addEventListener('click',resetWeightForm);
+  $('weight-history').addEventListener('click',e=>{
+    const edit=e.target.closest('[data-weight-edit]'); if(edit){const x=weightEntries.find(v=>String(v.id)===edit.dataset.weightEdit);if(!x)return;editingWeightId=String(x.id);$('weight-date').value=x.date;$('weight-value').value=weightFmt(x.weight);$('weight-submit').textContent='Zapisz zmiany';$('weight-cancel').hidden=false;$('weight-form').scrollIntoView({behavior:'smooth',block:'center'});return;}
+    const del=e.target.closest('[data-weight-delete]');if(!del)return;if(!confirm('Usunąć ten pomiar?'))return;weightEntries=weightEntries.filter(x=>String(x.id)!==del.dataset.weightDelete);saveWeights();renderWeight();
+  });
+
   $('fit-date').value = today;
   $('bud-date').value = today;
   $('bud-month').value = today.slice(0,7);
@@ -1878,6 +1991,7 @@ window.addEventListener('hashchange', function () {
     $('fitness-list').innerHTML = workouts.length ? workouts.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(x=>`
       <div class="entry"><div class="entry-main"><strong>${esc(x.name)}</strong><div class="entry-meta">${esc(x.date)} · ${esc(x.type)}${x.notes?' · '+esc(x.notes):''}</div><button class="fit-detail-btn" data-fit-details="${esc(x.id)}">Szczegóły treningu</button></div><div class="entry-side"><strong>${x.distance?esc(x.distance)+' km':''}${x.duration?' · '+esc(x.duration)+' min':''}</strong><button data-fit-edit="${esc(x.id)}">Edytuj</button> <button data-fit-delete="${esc(x.id)}">Usuń</button></div></div>`).join('') : '<p class="muted">Nie dodano jeszcze treningów.</p>';
     renderFitnessCalendar();
+    renderWeight();
   }
   function fmtMetric(value, unit, digits=1) {
     if (value === undefined || value === null || value === '' || !Number.isFinite(Number(value))) return '—';
@@ -2439,6 +2553,7 @@ window.addEventListener('hashchange', function () {
       localStorage.setItem(STORE_KEY, JSON.stringify(data || {}));
       if (data && data.habits) localStorage.setItem('karta-nawykow-v1', JSON.stringify(data.habits));
       if (data && Array.isArray(data.workouts)) localStorage.setItem('life-tracker-fitness-v1', JSON.stringify(data.workouts));
+      if (data && Array.isArray(data.weightEntries)) localStorage.setItem('life-tracker-weight-v1', JSON.stringify(data.weightEntries));
       if (data && Array.isArray(data.transactions)) localStorage.setItem('life-tracker-budget-v1', JSON.stringify(data.transactions));
       if (data && Array.isArray(data.savingsGoals)) localStorage.setItem('life-tracker-savings-v1', JSON.stringify(data.savingsGoals));
       if (data && Array.isArray(data.savingsPools)) localStorage.setItem('life-tracker-savings-pools-v1', JSON.stringify(data.savingsPools));
