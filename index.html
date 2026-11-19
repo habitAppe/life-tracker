@@ -2059,7 +2059,7 @@ window.addEventListener('hashchange', function () {
     $('bud-categories').innerHTML=Object.keys(cats).length?Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="category-row"><span>${esc(k)}</span><div class="category-bar"><i style="width:${v/max*100}%"></i></div><strong>${money(v)}</strong></div>`).join(''):'<p class="muted">Brak wydatków w tym miesiącu.</p>';
     $('budget-list').innerHTML=transactions.length?transactions.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(x=>`<div class="entry"><div class="entry-main"><strong>${esc(x.name)}</strong><div class="entry-meta">${esc(x.date)} · ${esc(x.category)}</div></div><div class="entry-side"><strong class="${x.type==='income'?'positive':'negative'}">${x.type==='income'?'+':'−'}${money(x.amount)}</strong><button data-bud-delete="${x.id}">Usuń</button></div></div>`).join(''):'<p class="muted">Nie dodano jeszcze transakcji.</p>';
     const grouped={}; savingsGoals.forEach(g=>{const poolName=goalPoolName(g);const k=poolKey(poolName);(grouped[k]||(grouped[k]={name:String(g.category||'').trim()||g.name,poolName,goals:[]})).goals.push(g);});
-    $('savings-list').innerHTML=savingsGoals.length?Object.values(grouped).map(group=>{const pool=normalizePool(getPool(group.poolName)||{cashBalance:0,accountBalance:0});const balance=poolTotal(pool);const groupTarget=group.goals.reduce((max,g)=>Math.max(max,+g.target||0),0);const groupPct=groupTarget>0?Math.min(100,balance/groupTarget*100):0;return `<section class="savings-pool"><div class="pool-head"><div><span class="pool-kicker">${group.goals.length>1?'WSPÓLNA PULA':'CEL OSZCZĘDNOŚCIOWY'}</span><h3>${esc(group.name)}</h3></div></div>${group.goals.length>1?`<div class="goal-track pool-track"><i style="width:${groupPct}%"></i></div><div class="pool-foot"><span>${group.goals.length} cele · cel puli ${money(groupTarget)}</span><span>${groupPct.toFixed(0)}%</span></div>`:''}<div class="pool-foot"><span>Gotówka: <strong>${money(poolCash(pool))}</strong></span><span>Konto: <strong>${money(poolAccount(pool))}</strong></span></div><div class="pool-actions"><button data-pool-add-cash="${esc(group.poolName)}">+ Gotówka</button><button data-pool-add-account="${esc(group.poolName)}">+ Na konto</button><button data-pool-take-cash="${esc(group.poolName)}">− Gotówka</button><button data-pool-take-account="${esc(group.poolName)}">− Z konta</button></div><div class="pool-goals">${group.goals.map(x=>{const pct=x.target>0?Math.min(100,Math.max(0,balance/x.target*100)):0;return `<details class="goal-card goal-collapsible"><summary class="goal-card-head"><strong>${esc(x.name)}</strong><span class="goal-expand-hint">Rozwiń⌄</span></summary><div class="goal-details"><div class="goal-card-progress"><span class="goal-amount">${pct.toFixed(0)}%</span><div class="goal-track"><i style="width:${pct}%"></i></div><div class="goal-foot"><span>${money(balance)} z ${money(+x.target||0)}</span><span>${x.monthly>0?'Plan: '+money(+x.monthly)+'/mies.':''}</span></div></div><div class="goal-actions"><button data-sav-edit="${x.id}">Edytuj</button><button data-sav-delete="${x.id}">Usuń</button></div></div></details>`}).join('')}</div></section>`}).join(''):'<p class="muted">Nie dodano jeszcze celów.</p>';
+    $('savings-list').innerHTML=savingsGoals.length?Object.values(grouped).map(group=>{const pool=normalizePool(getPool(group.poolName)||{cashBalance:0,accountBalance:0});const balance=poolTotal(pool);const groupTarget=group.goals.reduce((max,g)=>Math.max(max,+g.target||0),0);const groupPct=groupTarget>0?Math.min(100,balance/groupTarget*100):0;return `<section class="savings-pool"><div class="pool-head"><div><span class="pool-kicker">${group.goals.length>1?'WSPÓLNA PULA':'CEL OSZCZĘDNOŚCIOWY'}</span><h3>${esc(group.name)}</h3></div></div><div class="goal-track pool-track"><i style="width:${groupPct}%"></i></div><div class="pool-foot pool-progress-foot"><span>${group.goals.length>1?group.goals.length+' cele · postęp puli':'Postęp celu'}</span><span>${groupPct.toFixed(0)}%</span></div><div class="pool-foot pool-balances"><span>Gotówka: <strong>${money(poolCash(pool))}</strong></span><span>Konto: <strong>${money(poolAccount(pool))}</strong></span></div><div class="pool-actions"><button data-pool-add-cash="${esc(group.poolName)}">+ Gotówka</button><button data-pool-add-account="${esc(group.poolName)}">+ Na konto</button><button data-pool-take-cash="${esc(group.poolName)}">− Gotówka</button><button data-pool-take-account="${esc(group.poolName)}">− Z konta</button></div><div class="pool-goals">${group.goals.map(x=>{const pct=x.target>0?Math.min(100,Math.max(0,balance/x.target*100)):0;return `<details class="goal-card goal-collapsible"><summary class="goal-card-head"><strong>${esc(x.name)}</strong><span class="goal-expand-hint">Rozwiń⌄</span></summary><div class="goal-details"><div class="goal-card-progress"><span class="goal-amount">${pct.toFixed(0)}%</span><div class="goal-track"><i style="width:${pct}%"></i></div><div class="goal-foot"><span>${money(balance)} z ${money(+x.target||0)}</span><span>${x.monthly>0?'Plan: '+money(+x.monthly)+'/mies.':''}</span></div></div><div class="goal-actions"><button data-sav-edit="${x.id}">Edytuj</button><button data-sav-delete="${x.id}">Usuń</button></div></div></details>`}).join('')}</div></section>`}).join(''):'<p class="muted">Nie dodano jeszcze celów.</p>';
     const original=debts.reduce((a,x)=>a+(+x.original||0),0), remaining=debts.reduce((a,x)=>a+(+x.remaining||0),0);
     $('debt-total').textContent=debts.length?`Pozostało: ${money(remaining)}`:'';
     $('debts-list').innerHTML=debts.length?debts.map(x=>{const paid=Math.max(0,(+x.original||0)-(+x.remaining||0));const pct=x.original>0?Math.min(100,Math.max(0,(paid/x.original)*100)):0;const monthly=+(x.monthly||x.minimumMonthly||0);const months=monthly>0?Math.ceil((+x.remaining||0)/monthly):0;let payoff='Ustaw minimalną spłatę, aby obliczyć datę.';if((+x.remaining||0)<=0)payoff='Spłacone';else if(months>0){const d=new Date();d.setHours(12,0,0,0);d.setMonth(d.getMonth()+months);payoff='Przewidywana spłata: '+d.toLocaleDateString('pl-PL',{month:'long',year:'numeric'});}const history=Array.isArray(x.payments)?x.payments.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))):[];return `<details class="goal-card goal-collapsible"><summary class="goal-card-head"><strong>${esc(x.name)}</strong><span class="goal-expand-hint">Rozwiń⌄</span></summary><div class="goal-details"><div class="goal-card-progress"><span class="goal-amount">${pct.toFixed(0)}% spłacono</span><div class="goal-track debt"><i style="width:${pct}%"></i></div><div class="goal-foot"><span>Pozostało: ${money(+x.remaining||0)} z ${money(+x.original||0)}</span><span>Min. ${money(monthly)}/mies.</span></div><p class="small muted" style="margin:8px 0 4px">${payoff}${months>0?' · około '+months+' mies.':''}</p></div><div class="pool-actions"><button data-debt-pay="${x.id}">+ Dodaj spłatę</button></div>${history.length?`<details class="small debt-history" style="margin-top:8px"><summary>Historia spłat (${history.length})</summary><div class="entry-list" style="margin-top:8px">${history.map(h=>`<div class="entry"><div class="entry-main"><strong>${money(+h.amount||0)}</strong><div class="entry-meta">${esc(h.date||'')}</div></div></div>`).join('')}</div></details>`:''}<div class="goal-actions"><button data-debt-edit="${x.id}">Edytuj</button><button data-debt-delete="${x.id}">Usuń</button></div></div></details>`}).join(''):'<p class="muted">Nie dodano jeszcze zadłużeń.</p>';
@@ -2861,16 +2861,6 @@ hr{border-color:#3c493b!important;opacity:.9}
 /* HABITS: stronger card separation and contrast on small screens */
 @media (max-width:700px){
   #panel-habits .list{gap:15px!important;grid-template-columns:1fr!important}
-  #panel-habits .habit{background:#fff!important;border:1.5px solid #c8d8cc!important;border-left:5px solid #438b68!important;border-radius:17px!important;padding:17px 15px!important;box-shadow:0 7px 20px rgba(18,55,34,.10)!important;gap:14px!important}
-  #panel-habits .habit:nth-child(3n+2){border-left-color:#527fb4!important;background:#f8fbff!important}
-  #panel-habits .habit:nth-child(3n){border-left-color:#b17b42!important;background:#fffaf4!important}
-  #panel-habits .habit .hh h3{color:#17251c!important}
-  #panel-habits .habit .meta,#panel-habits .habit .sub2,#panel-habits .habit .gc{color:#526257!important}
-  #panel-habits .habit .habit-tag{background:#edf3ee!important;border-color:#cbd9ce!important;color:#405448!important}
-  #panel-habits .habit .days{gap:5px!important}
-  #panel-habits .habit .day{background:#f0f4f0!important;border-color:#cbd6cd!important;color:#25352a!important}
-  #panel-habits .habit .day .dn{color:#65756a!important}
-  #panel-habits .habit .day[aria-pressed="true"]{background:var(--hc)!important;border-color:var(--hc)!important;color:var(--on-h)!important}
 }
 /* FINANSE: keep goal amounts and progress hidden until the goal title is opened */
 #panel-budget .goal-collapsible{padding:0!important;overflow:hidden!important}
@@ -2887,4 +2877,117 @@ hr{border-color:#3c493b!important;opacity:.9}
 #panel-budget .goal-collapsible .goal-actions{margin-top:12px}
 #panel-budget .debt-history>summary{cursor:pointer;color:#d8d0b4}
 </style>
+
+
+<style id="lifetracker-premium-redesign-2026-11-v2">
+:root{
+  --lt-bg:#0d120f;--lt-surface:#151e18;--lt-surface-2:#1b2820;--lt-line:#35483a;
+  --lt-text:#edf3e9;--lt-muted:#aab8a7;--lt-accent:#c5f36a;--lt-accent-2:#78c6a0;
+  --lt-gold:#e8c477;--lt-blue:#82b5df;--lt-red:#e49a88;
+}
+html{background:var(--lt-bg)}
+body{background:radial-gradient(ellipse at 50% -18%,rgba(104,145,78,.13),transparent 42%),var(--lt-bg)!important;color:var(--lt-text)!important}
+.appnav{position:sticky;top:0;z-index:50;background:rgba(13,18,15,.92)!important;border-bottom:1px solid rgba(115,145,105,.24)!important;backdrop-filter:blur(18px);padding-top:12px!important;padding-bottom:12px!important}
+.app-tab{border:1px solid #344537!important;background:linear-gradient(180deg,#1c2920,#151e18)!important;color:#b9c6b4!important;border-radius:12px!important;min-height:44px;transition:all .18s ease}
+.app-tab:hover{border-color:#718b4c!important;color:#f0f4e9!important;transform:translateY(-1px)}
+.app-tab.active{background:linear-gradient(135deg,#d0f47a,#a8d85c)!important;border-color:#d0f47a!important;color:#17220f!important;box-shadow:0 6px 20px rgba(184,226,101,.18)!important}
+.module-wrap{padding-top:30px!important}
+.module-head{align-items:flex-start!important;margin-bottom:22px!important}
+.module-head h1{font-size:clamp(29px,5vw,43px)!important;line-height:1.06!important;color:#f1f5e9!important}
+.eyebrow{color:var(--lt-accent)!important;letter-spacing:.18em!important}
+.muted,.module-panel .muted{color:var(--lt-muted)!important}
+.module-card,.module-panel .panel,.module-panel .empty{background:linear-gradient(145deg,#1c2920,#151e18)!important;border:1px solid #35483a!important;border-radius:18px!important;box-shadow:0 12px 30px rgba(0,0,0,.2),inset 0 1px rgba(255,255,255,.025)!important}
+.module-card{padding:19px!important}
+.module-card h2{color:#edf3e9!important;font-size:19px!important;letter-spacing:-.02em}
+.module-grid{gap:15px!important}
+.action,.btn{border-radius:11px!important;transition:transform .16s ease,border-color .16s ease,filter .16s ease}
+.action:not(.primary){background:#202d23!important;border-color:#465b48!important;color:#e5eee1!important}
+.action:hover,.btn:hover{filter:brightness(1.09);transform:translateY(-1px)}
+.action.primary{background:linear-gradient(135deg,#d0f47a,#a8d85c)!important;border-color:#c5ed70!important;color:#17220f!important}
+input,select,textarea{accent-color:var(--lt-accent)}
+.module-panel input,.module-panel select,.module-panel textarea{background:#101812!important;border-color:#435743!important;color:#edf3e9!important}
+.module-panel input:focus,.module-panel select:focus,.module-panel textarea:focus{border-color:#9fc65d!important;box-shadow:0 0 0 3px rgba(197,243,106,.11)!important;outline:none!important}
+.stats-grid{gap:10px!important}
+.stat{background:linear-gradient(145deg,#111a14,#1a261d)!important;border:1px solid #34483a!important;border-radius:14px!important}
+.stat span{color:#aab8a7!important}
+.stat strong{color:#edf4e6!important}
+.entry{background:#111a14!important;border-color:#34483a!important;border-radius:13px!important}
+.entry:hover{border-color:#718b4c!important}
+/* HABITS: dark, clearly separated cards; no pale or white mobile fills. */
+#panel-habits .wrap{max-width:1080px!important;padding-top:25px!important}
+#panel-habits .top{background:linear-gradient(135deg,#263a2a,#18251c)!important;border:1px solid #4a6547!important;border-radius:20px!important;box-shadow:0 14px 34px rgba(0,0,0,.25)!important}
+#panel-habits .top h1,#panel-habits .top .title{color:#f0f5e8!important}
+#panel-habits .sum{background:linear-gradient(145deg,#263629,#1b281f)!important;border:1px solid #536748!important;border-radius:16px!important;color:#edf3e9!important}
+#panel-habits .habit{background:linear-gradient(145deg,#202e24,#17221b)!important;border:1px solid #435b45!important;border-radius:18px!important;color:#edf3e9!important;box-shadow:0 10px 25px rgba(0,0,0,.2),inset 0 1px rgba(255,255,255,.025)!important;gap:14px!important}
+#panel-habits .habit:nth-child(3n+2){background:linear-gradient(145deg,#202d30,#172124)!important;border-color:#3e5b5e!important}
+#panel-habits .habit:nth-child(3n){background:linear-gradient(145deg,#302b20,#211f18)!important;border-color:#66563a!important}
+#panel-habits .habit:hover{transform:translateY(-2px);border-color:#8ba65b!important;box-shadow:0 15px 32px rgba(0,0,0,.28)!important}
+#panel-habits .habit .hh h3{color:#f1f5e9!important}
+#panel-habits .habit .meta,#panel-habits .habit .sub2,#panel-habits .habit .gc,#panel-habits .habit .hint{color:#b4c1b0!important}
+#panel-habits .habit-tag{background:#2b3b2e!important;border:1px solid #4c654b!important;color:#d4e4cb!important}
+#panel-habits .habit .bar{background:#101812!important;border:1px solid #465a43!important}
+#panel-habits .habit .days{gap:6px!important}
+#panel-habits .habit .day{background:#29382d!important;border:1px solid #4c624b!important;color:#dce7d7!important;border-radius:9px!important}
+#panel-habits .habit .day .dn{color:#aebda8!important}
+#panel-habits .habit .day[aria-pressed="true"]{background:var(--hc)!important;border-color:var(--hc)!important;color:var(--on-h)!important;box-shadow:0 3px 12px rgba(0,0,0,.22)!important}
+#panel-habits .habit .day.today{outline:2px solid #e8c477!important;outline-offset:1px}
+/* FINANCE: all monetary pool balances and pool actions stay hidden until a goal is expanded. */
+#panel-budget .savings-pool{padding:14px;margin-bottom:13px;background:linear-gradient(145deg,#20271d,#171e17)!important;border:1px solid #4c593d!important;border-radius:17px!important}
+#panel-budget .pool-head h3{color:#f0f4e8!important;font-size:16px!important}
+#panel-budget .pool-kicker{color:#c3d98c!important;letter-spacing:.12em;font-size:10px;font-weight:800}
+#panel-budget .pool-track{height:9px!important;margin:12px 0 7px!important;background:#111812!important;border:1px solid #4a593d!important}
+#panel-budget .pool-track i{background:linear-gradient(90deg,#9bc94f,#d0f47a)!important}
+#panel-budget .pool-progress-foot{display:flex!important;color:#b8c5ae!important;font-size:11px!important;margin:0 1px 9px!important}
+#panel-budget .pool-balances,#panel-budget .savings-pool>.pool-actions{display:none!important}
+#panel-budget .savings-pool:has(.goal-collapsible[open]) .pool-balances,
+#panel-budget .savings-pool:has(.goal-collapsible[open])>.pool-actions{display:flex!important}
+#panel-budget .pool-balances{justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 2px 2px;color:#c3cfbd!important;font-size:12px!important}
+#panel-budget .pool-balances strong{color:#e8f2d9!important}
+#panel-budget .savings-pool>.pool-actions{flex-wrap:wrap;gap:7px!important;margin:9px 0!important}
+#panel-budget .pool-actions button{background:#283627!important;border:1px solid #536745!important;color:#e5eedc!important;border-radius:9px!important;padding:8px 10px!important}
+#panel-budget .goal-collapsible{background:linear-gradient(145deg,#1b281e,#141d17)!important;border:1px solid #435740!important;border-radius:13px!important;margin-top:8px!important}
+#panel-budget .goal-collapsible>.goal-card-head{min-height:55px!important;padding:15px 16px!important}
+#panel-budget .goal-collapsible>.goal-card-head strong{color:#eff5e8!important;font-size:14px!important}
+#panel-budget .goal-collapsible>.goal-card-head:after{color:#c5f36a!important}
+#panel-budget .goal-expand-hint{color:#aebe9e!important}
+#panel-budget .goal-details{border-top:1px solid #35483a!important}
+#panel-budget .goal-card-progress>.goal-amount{color:#d2ed8a!important}
+#panel-budget .goal-track{background:#101812!important;border-color:#435640!important}
+#panel-budget .goal-track i{background:linear-gradient(90deg,#91bd4d,#d0f47a)!important}
+#panel-budget .goal-track.debt i{background:linear-gradient(90deg,#bd8747,#e8c477)!important}
+#panel-budget .goal-foot{color:#b5c2ae!important}
+/* WORK: calm calendar and remove any accidental pay/rate labels in day cells. */
+#panel-work .work-day{background:#17231a!important;border-color:#3d533b!important;border-radius:10px!important}
+#panel-work .work-day.has-entry{background:linear-gradient(145deg,#2c3d29,#1e2c21)!important;border-color:#718b4c!important}
+#panel-work .work-day-hours{color:#d0ed83!important}
+#panel-work .work-day-pay{display:none!important}
+/* FITNESS: unify cards, calendar and detail surfaces. */
+#panel-fitness .fit-calendar{background:linear-gradient(145deg,#1c2924,#151f1b)!important;border-color:#3d5c50!important}
+#panel-fitness .fit-day{border-radius:10px!important}
+#panel-fitness .fit-day.selected{box-shadow:inset 0 0 0 2px #c5f36a!important}
+#panel-fitness .fit-detail-dialog{background:#17221b!important;border-color:#48604b!important}
+#panel-fitness .fit-detail-section{background:#111a14!important;border-color:#35483a!important}
+/* Responsive spacing and touch targets */
+@media(max-width:700px){
+  .appnav{gap:6px!important;padding:8px!important}
+  .app-tab{padding:10px 5px!important;min-height:42px!important;font-size:11px!important;letter-spacing:.015em!important}
+  .module-wrap{padding:20px 10px 38px!important}
+  .module-card{padding:15px!important;border-radius:16px!important}
+  .module-grid{gap:11px!important}
+  #panel-habits .wrap{padding:16px 10px 36px!important}
+  #panel-habits .list{display:grid!important;grid-template-columns:1fr!important;gap:13px!important}
+  #panel-habits .habit{padding:15px 13px!important;gap:13px!important;border-radius:16px!important}
+  #panel-habits .habit .days{gap:4px!important}
+  #panel-habits .habit .day{min-height:52px!important}
+  #panel-budget .savings-pool{padding:11px!important}
+  #panel-budget .goal-collapsible>.goal-card-head{padding:14px!important}
+  #panel-work .work-day{min-height:63px!important}
+}
+@media(max-width:380px){
+  .app-tab{font-size:10px!important;padding:9px 3px!important}
+  #panel-habits .habit .day{min-height:47px!important}
+}
+@media(prefers-reduced-motion:reduce){.app-tab,.module-card,#panel-habits .habit,.action{transition:none!important}}
+</style>
+
 </body></html>
