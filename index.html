@@ -910,7 +910,7 @@ details.tbl .tw { overflow-x: auto; }
   <div style="background:#181e1b;border:1px solid #2b3430;border-radius:14px;padding:14px 16px;color:#e7eee9;">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
       <div><strong style="display:block;">Konto i synchronizacja</strong><span id="cloud-status" style="display:block;color:#9aa8a0;font-size:12px;margin-top:4px;">Łączenie z usługą…</span></div>
-      <div id="cloud-user-actions" style="display:none;gap:8px;align-items:center;flex-wrap:wrap;"><span id="cloud-email" style="font-size:12px;color:#9aa8a0;"></span><button id="cloud-logout" type="button" class="action">Wyloguj</button></div>
+      <div id="cloud-user-actions" style="display:none;gap:8px;align-items:center;flex-wrap:wrap;"><span id="cloud-email" style="font-size:12px;color:#9aa8a0;"></span><button id="cloud-pull" type="button" class="action">Pobierz z chmury</button><button id="cloud-logout" type="button" class="action">Wyloguj</button></div>
     </div>
     <form id="cloud-auth-form" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
       <input id="cloud-email-input" type="email" autocomplete="email" placeholder="Adres e-mail" required style="flex:1 1 190px;min-width:0;border:1px solid #35413a;border-radius:9px;background:#101412;color:#e7eee9;padding:11px 12px;">
@@ -2611,8 +2611,12 @@ window.addEventListener('hashchange', function () {
           data: merged,
           updated_at: new Date().toISOString()
         }, { onConflict: 'user_id' });
-        if (mergeError) throw mergeError;
-        status('Dane zsynchronizowane · zapisano połączoną wersję.', '#4bc59b');
+        if (mergeError) {
+          console.warn('LifeTracker: pobrano dane, ale zapis połączonej wersji do chmury nie powiódł się', mergeError);
+          status('Pobrano dane na to urządzenie. Zapis do chmury nieudany (limit) — dane są lokalnie.', '#ffb28f');
+        } else {
+          status('Dane pobrane i zsynchronizowane.', '#4bc59b');
+        }
         window.dispatchEvent(new Event('lifetracker:datachange'));
         // Nie przeładowujemy strony automatycznie: zapobiega to pętli na mobile.
       } else {
@@ -2666,6 +2670,31 @@ window.addEventListener('hashchange', function () {
       status('Konto utworzone. Sprawdź skrzynkę e-mail i potwierdź adres, a następnie zaloguj się.', '#4bc59b');
     }
   });
+  const pullButton = document.getElementById('cloud-pull');
+  if (pullButton) pullButton.addEventListener('click', async function () {
+    if (!client || !currentUser) { status('Zaloguj się, aby pobrać dane z chmury.', '#ff8a80'); return; }
+    pullButton.disabled = true;
+    pullButton.textContent = 'Pobieranie…';
+    status('Pobieram najnowszy zapis z chmury…');
+    try {
+      const { data: row, error } = await client.from('life_tracker_data').select('data, updated_at').eq('user_id', currentUser.id).maybeSingle();
+      if (error) throw error;
+      if (!row || !row.data) { status('Chmura nie ma jeszcze zapisanego zestawu danych. Dane na tym urządzeniu pozostają bez zmian.', '#ffb28f'); return; }
+      const cloud = row.data;
+      saveLocal(cloud);
+      window.dispatchEvent(new Event('lifetracker:datachange'));
+      status('Pobrano zapis z chmury. Odświeżam widok, aby wczytać dane we wszystkich zakładkach…', '#4bc59b');
+      // Reload is only user-triggered here, not automatic, so it cannot form a loop.
+      setTimeout(() => window.location.reload(), 500);
+    } catch (err) {
+      console.error('LifeTracker manual cloud pull:', err);
+      status('Nie udało się pobrać danych: ' + (err.message || err), '#ff8a80');
+    } finally {
+      pullButton.disabled = false;
+      pullButton.textContent = 'Pobierz z chmury';
+    }
+  });
+
   logoutButton.addEventListener('click', async function () {
     const { error } = await client.auth.signOut();
     if (error) { status('Błąd wylogowania: ' + error.message, '#ff8a80'); return; }
@@ -2975,7 +3004,7 @@ hr{border-color:#3c493b!important;opacity:.9}
 .app-refresh:active{transform:scale(.97)}
 .app-refresh:disabled{opacity:.65;cursor:wait}
 .app-refresh:first-letter{font-size:19px}
-@media(max-width:600px){.top-actions{width:100%;justify-content:space-between}.app-refresh{min-width:44px;justify-content:center}.app-refresh span{display:inline}}
+@media(max-width:600px){#cloud-pull{min-height:42px;padding:8px 11px;font-size:12px}.top-actions{width:100%;justify-content:space-between}.app-refresh{min-width:44px;justify-content:center}.app-refresh span{display:inline}}
 </style>
 <script id="mobile-refresh-handler">
 (()=>{const button=document.getElementById('app-refresh');if(!button)return;button.addEventListener('click',()=>{button.disabled=true;const label=button.querySelector('span');if(label)label.textContent='Odświeżanie…';window.location.reload();});})();
