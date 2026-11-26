@@ -904,7 +904,7 @@ details.tbl .tw { overflow-x: auto; }
   <button class="app-tab active" data-panel="habits">HABITS</button>
   <button class="app-tab" data-panel="fitness">FITNESS</button>
   <button class="app-tab" data-panel="budget">FINANSE</button>
-  <button class="app-tab" data-panel="work">PRACA</button>
+  <button class="app-tab" data-panel="work">PRACA</button><button class="app-tab" data-panel="todo">TO-DO</button>
 </nav>
 <section id="cloud-account" aria-label="Konto i synchronizacja" style="max-width:1040px;margin:14px auto;padding:0 16px;">
   <div style="background:#181e1b;border:1px solid #2b3430;border-radius:14px;padding:14px 16px;color:#e7eee9;">
@@ -1115,8 +1115,8 @@ details.tbl .tw { overflow-x: auto; }
         <form id="work-form" class="form-grid">
           <label class="wide">Data<input id="work-date" type="date" required></label>
           <div class="work-form-divider wide">Wpisz godzinę rozpoczęcia i zakończenia pracy</div>
-          <label>Od<input id="work-start" type="time"></label>
-          <label>Do<input id="work-end" type="time"></label>
+          <label>Od<input id="work-start" type="text" inputmode="numeric" autocomplete="off" placeholder="07:00" maxlength="5"></label>
+          <label>Do<input id="work-end" type="text" inputmode="numeric" autocomplete="off" placeholder="16:00" maxlength="5"></label>
           <label>Przerwa (min)<input id="work-break" type="number" min="0" step="5" value="0"></label>
           <label class="wide">Komentarz do dnia<textarea id="work-comment" rows="2" maxlength="240" placeholder="np. Montaż okien w Kołobrzegu, pergola, dojazd…"></textarea></label>
           <input id="work-edit-id" type="hidden">
@@ -1832,6 +1832,7 @@ window.addEventListener('hashchange', function () {
 </script>
 
 
+<section id="panel-todo" class="module-panel"><div class="module-wrap todo-wrap"><header class="module-head"><div><p class="eyebrow">CLEAR YOUR MIND</p><h1>To-do</h1><p class="muted">Zamień myśli w konkretne kroki. Jedna lista, spokojna głowa.</p></div></header><article class="todo-hero module-card"><div><span class="todo-kicker">DZISIAJ</span><strong id="todo-today-count">0</strong><span>zadań do zrobienia</span></div><div class="todo-ring" id="todo-ring"><span id="todo-progress">0%</span></div></article><form id="todo-form" class="todo-add module-card"><input id="todo-title" type="text" maxlength="140" placeholder="Co chcesz zrobić?" required aria-label="Treść zadania"><div class="todo-fields"><label>Termin<input id="todo-date" type="date"></label><label>Priorytet<select id="todo-priority"><option value="normal">Normalny</option><option value="high">Ważny</option><option value="low">Kiedyś</option></select></label><label>Obszar<select id="todo-category"><option>Osobiste</option><option>Praca</option><option>Fitness</option><option>Finanse</option><option>Dom</option><option>Inne</option></select></label><button class="action primary" type="submit">＋ Dodaj zadanie</button></div></form><div class="todo-toolbar"><div class="todo-filters"><button type="button" class="todo-filter active" data-filter="all">Wszystkie</button><button type="button" class="todo-filter" data-filter="today">Dzisiaj</button><button type="button" class="todo-filter" data-filter="open">Do zrobienia</button><button type="button" class="todo-filter" data-filter="done">Ukończone</button></div><button id="todo-clear-done" type="button" class="todo-clear">Usuń ukończone</button></div><div id="todo-list" class="todo-list"></div><div id="todo-empty" class="todo-empty" hidden><span>✦</span><strong>Tu jest czysto.</strong><p>Dodaj zadanie albo zmień filtr.</p></div></div></section>
 <script>
 (function(){
   'use strict';
@@ -2330,7 +2331,7 @@ window.addEventListener('hashchange', function () {
   };
   renderFitness(); renderBudget();
   const initial=location.hash.replace('#','');
-  if(['habits','fitness','budget'].includes(initial)) document.querySelector('[data-panel="'+initial+'"]').click();
+  if(['habits','fitness','budget','work','todo'].includes(initial)) document.querySelector('[data-panel="'+initial+'"]').click();
 })();
 </script>
 
@@ -2381,6 +2382,8 @@ window.addEventListener('hashchange', function () {
   }
   function dateObj(s){const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d,12);}
   function dateStr(d){return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
+  function normalizeClock(value){let v=String(value||'').trim().replace(/[.]/g,':');if(/^\d{3,4}$/.test(v)){v=v.padStart(4,'0');v=v.slice(0,2)+':'+v.slice(2);}if(/^\d{1,2}:\d{1,2}$/.test(v)){const [h,m]=v.split(':').map(Number);v=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');}return /^([01]\d|2[0-3]):([0-5]\d)$/.test(v)?v:'';}
+  ['work-start','work-end'].forEach(id=>{const el=$(id);el.addEventListener('blur',()=>{if(el.value.trim())el.value=normalizeClock(el.value)||el.value;});el.addEventListener('input',()=>{el.value=el.value.replace(/[^0-9:.]/g,'').slice(0,5);});});
   function getHours(item){
     // Nowe wpisy zawsze liczymy z godzin od–do; starsze wpisy bez godzin
     // zachowują dotychczas zapisaną wartość dla zgodności wstecznej.
@@ -2476,10 +2479,10 @@ window.addEventListener('hashchange', function () {
   }
   $('work-form').addEventListener('submit',e=>{
     e.preventDefault();
-    const date=$('work-date').value,start=$('work-start').value,end=$('work-end').value;
+    const date=$('work-date').value,start=normalizeClock($('work-start').value),end=normalizeClock($('work-end').value);$('work-start').value=start;$('work-end').value=end;
     const br=Math.max(0,Number($('work-break').value)||0);
     if(!date){alert('Wybierz datę.');return;}
-    if(!start||!end){alert('Wpisz godzinę rozpoczęcia i zakończenia pracy.');return;}
+    if(!start||!end){alert('Wpisz poprawną godzinę w formacie HH:MM, np. 07:00 lub 16:30.');return;}
     if(start===end){alert('Godzina rozpoczęcia i zakończenia nie mogą być takie same.');return;}
     const item={id:editingId||`work-${Date.now()}`,date,start,end,breakMinutes:br,comment:$('work-comment').value.trim()};
     if(getHours(item)<=0){alert('Po odjęciu przerwy czas pracy musi być większy od zera.');return;}
@@ -2550,15 +2553,16 @@ window.addEventListener('hashchange', function () {
   function saveLocal(data) {
     applyingRemote = true;
     try {
-      localStorage.setItem(STORE_KEY, JSON.stringify(data || {}));
-      if (data && data.habits) localStorage.setItem('karta-nawykow-v1', JSON.stringify(data.habits));
-      if (data && Array.isArray(data.workouts)) localStorage.setItem('life-tracker-fitness-v1', JSON.stringify(data.workouts));
-      if (data && Array.isArray(data.weightEntries)) localStorage.setItem('life-tracker-weight-v1', JSON.stringify(data.weightEntries));
-      if (data && Array.isArray(data.transactions)) localStorage.setItem('life-tracker-budget-v1', JSON.stringify(data.transactions));
-      if (data && Array.isArray(data.savingsGoals)) localStorage.setItem('life-tracker-savings-v1', JSON.stringify(data.savingsGoals));
-      if (data && Array.isArray(data.savingsPools)) localStorage.setItem('life-tracker-savings-pools-v1', JSON.stringify(data.savingsPools));
-      if (data && Array.isArray(data.debts)) localStorage.setItem('life-tracker-debts-v1', JSON.stringify(data.debts));
-      if (data && data.budgetSettings) localStorage.setItem('life-tracker-budget-settings-v1', JSON.stringify(data.budgetSettings));
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(data || {})); } catch(storageError) { console.warn('LifeTracker: pamięć lokalna ograniczona',storageError); }
+      if (data && data.habits) try { localStorage.setItem('karta-nawykow-v1', JSON.stringify(data.habits)); } catch(e) {}
+      if (data && Array.isArray(data.workouts)) try { localStorage.setItem('life-tracker-fitness-v1', JSON.stringify(data.workouts)); } catch(e) {}
+      if (data && Array.isArray(data.weightEntries)) try { localStorage.setItem('life-tracker-weight-v1', JSON.stringify(data.weightEntries)); } catch(e) {}
+      if (data && Array.isArray(data.transactions)) try { localStorage.setItem('life-tracker-budget-v1', JSON.stringify(data.transactions)); } catch(e) {}
+      if (data && Array.isArray(data.savingsGoals)) try { localStorage.setItem('life-tracker-savings-v1', JSON.stringify(data.savingsGoals)); } catch(e) {}
+      if (data && Array.isArray(data.savingsPools)) try { localStorage.setItem('life-tracker-savings-pools-v1', JSON.stringify(data.savingsPools)); } catch(e) {}
+      if (data && Array.isArray(data.debts)) try { localStorage.setItem('life-tracker-debts-v1', JSON.stringify(data.debts)); } catch(e) {}
+      if (data && data.budgetSettings) try { localStorage.setItem('life-tracker-budget-settings-v1', JSON.stringify(data.budgetSettings)); } catch(e) {}
+      if (data && Array.isArray(data.todoItems)) try { localStorage.setItem('life-tracker-todo-v1', JSON.stringify(data.todoItems)); } catch(e) {}
     } finally { applyingRemote = false; }
   }
   function showSignedIn(user) {
@@ -2595,6 +2599,8 @@ window.addEventListener('hashchange', function () {
         if (Array.isArray(current.savingsGoals)) merged.savingsGoals = current.savingsGoals;
       }
       const remoteText = JSON.stringify(merged);
+      // Zachowaj lokalną listę zadań, jeśli starsza kopia chmurowa jeszcze jej nie zawiera.
+      if ((!Array.isArray(merged.todoItems) || !merged.todoItems.length) && Array.isArray(current.todoItems) && current.todoItems.length) merged.todoItems = current.todoItems;
       const localText = JSON.stringify(current);
       if (remoteText !== localText) {
         saveLocal(merged);
@@ -2621,7 +2627,7 @@ window.addEventListener('hashchange', function () {
     status('Zapisywanie zmian w chmurze…');
     saveTimer = setTimeout(() => uploadLocal().catch(err => {
       console.error('LifeTracker sync:', err);
-      status('Błąd synchronizacji: ' + (err.message || 'sprawdź połączenie'), '#ff8a80');
+      const msg=String(err.message||'sprawdź połączenie'); status(/quota|exceeded|storage|limit/i.test(msg)?'Limit chmury osiągnięty. Dane pozostają lokalnie; spróbuj ponownie później.':'Błąd synchronizacji: '+msg, '#ff8a80');
     }), 900);
   }
 
@@ -2642,7 +2648,7 @@ window.addEventListener('hashchange', function () {
     if (error) { status('Nie udało się zalogować: ' + error.message, '#ff8a80'); return; }
     currentUser = data.user;
     showSignedIn(currentUser);
-    try { await pullOrCreate(); } catch (err) { status('Błąd pobierania danych: ' + err.message, '#ff8a80'); }
+    try { await pullOrCreate(); } catch (err) { status(/quota|exceeded|storage|limit/i.test(String(err.message))?'Limit chmury osiągnięty. Dane pozostają lokalnie.':'Błąd pobierania danych: '+err.message, '#ff8a80'); }
   });
   signupButton.addEventListener('click', async function () {
     const email = emailInput.value.trim();
@@ -2971,7 +2977,7 @@ hr{border-color:#3c493b!important;opacity:.9}
 @media(max-width:600px){.top-actions{width:100%;justify-content:space-between}.app-refresh{min-width:44px;justify-content:center}.app-refresh span{display:inline}}
 </style>
 <script id="mobile-refresh-handler">
-(()=>{const button=document.getElementById('app-refresh');if(!button)return;button.addEventListener('click',()=>{button.disabled=true;button.querySelector('span').textContent='Odświeżanie…';window.location.reload();});})();
+(()=>{const button=document.getElementById('app-refresh');if(!button)return;button.addEventListener('click',async()=>{button.disabled=true;button.querySelector('span').textContent='Odświeżanie…';try{if('serviceWorker' in navigator){const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(r=>r.unregister()));}const u=new URL(location.href);u.searchParams.set('refresh',Date.now());location.replace(u.toString());}catch(e){location.replace(location.pathname+'?refresh='+Date.now()+location.hash);}});})();
 </script>
 
 <style id="lifetracker-requested-polish-2026-11">
@@ -3146,4 +3152,11 @@ input,select,textarea{accent-color:var(--lt-accent)}
   #panel-work .work-entry-side button{padding:6px 8px;}
 }
 </style>
+<script id="lifetracker-todo-module">
+(()=>{const $=id=>document.getElementById(id);const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));let items=(window.LifeTrackerStore&&window.LifeTrackerStore.read('todoItems',[]))||[];if(!Array.isArray(items))items=[];let filter='all';const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};const persist=()=>{try{localStorage.setItem('life-tracker-todo-v1',JSON.stringify(items))}catch(e){}if(window.LifeTrackerStore)window.LifeTrackerStore.write('todoItems',items);window.dispatchEvent(new Event('lifetracker:datachange'));render()};const render=()=>{const done=items.filter(x=>x.done).length;$('todo-today-count').textContent=items.filter(x=>!x.done&&x.date===today()).length;$('todo-progress').textContent=items.length?Math.round(done/items.length*100)+'%':'0%';$('todo-ring').style.setProperty('--progress',items.length?done/items.length*100:0);let list=items.filter(x=>filter==='today'?x.date===today()&&!x.done:filter==='open'?!x.done:filter==='done'?x.done:true);list.sort((a,b)=>(a.done-b.done)||((a.date||'9999').localeCompare(b.date||'9999'))||(({high:0,normal:1,low:2}[a.priority]||1)-({high:0,normal:1,low:2}[b.priority]||1)));$('todo-list').innerHTML=list.map(x=>`<article class="todo-item ${x.done?'is-done':''} priority-${x.priority||'normal'}"><button class="todo-check" data-done="${x.id}">${x.done?'✓':''}</button><div class="todo-copy"><strong>${esc(x.title)}</strong><div class="todo-meta"><span>${esc(x.category||'Osobiste')}</span>${x.date?`<span class="${x.date<today()&&!x.done?'overdue':''}">${x.date===today()?'Dzisiaj':x.date<today()?'Po terminie':new Date(x.date+'T12:00:00').toLocaleDateString('pl-PL',{day:'numeric',month:'short'})}</span>`:''}<span class="priority-label">${x.priority==='high'?'Ważne':x.priority==='low'?'Kiedyś':'Normalne'}</span></div></div><button class="todo-delete" data-delete="${x.id}">×</button></article>`).join('');$('todo-empty').hidden=!!list.length};$('todo-form').addEventListener('submit',e=>{e.preventDefault();const title=$('todo-title').value.trim();if(!title)return;items.unshift({id:'todo-'+Date.now(),title,date:$('todo-date').value,priority:$('todo-priority').value,category:$('todo-category').value,done:false,createdAt:new Date().toISOString()});$('todo-title').value='';$('todo-date').value='';persist()});$('todo-list').addEventListener('click',e=>{const b=e.target.closest('[data-done]');if(b){const x=items.find(i=>i.id===b.dataset.done);if(x)x.done=!x.done;persist();return}const d=e.target.closest('[data-delete]');if(d){items=items.filter(i=>i.id!==d.dataset.delete);persist()}});document.querySelectorAll('.todo-filter').forEach(b=>b.addEventListener('click',()=>{filter=b.dataset.filter;document.querySelectorAll('.todo-filter').forEach(x=>x.classList.toggle('active',x===b));render()}));$('todo-clear-done').addEventListener('click',()=>{if(items.some(x=>x.done)&&confirm('Usunąć wszystkie ukończone zadania?')){items=items.filter(x=>!x.done);persist()}});render()})();
+</script>
+<style id="lifetracker-elegant-redesign-2026">
+:root{--accent:#b9e66c;--muted2:#9eafa3;--shadow:0 12px 32px rgba(0,0,0,.22)}body{background:radial-gradient(ellipse at 50% -20%,#26372b 0,#101512 45%)!important;color:#edf3ed!important;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important}.appnav{padding:10px max(14px,calc((100vw - 1060px)/2))!important;gap:7px!important;background:rgba(13,18,15,.9)!important;border-bottom:1px solid #29382e!important;box-shadow:0 12px 30px #0003!important}.app-tab{border-radius:13px!important;min-height:45px!important;padding:10px 19px!important;font-size:11px!important;letter-spacing:.08em!important;background:#19231c!important;border-color:#344438!important;color:#aab8ad!important}.app-tab.active{background:linear-gradient(135deg,#d4f38b,#a9d85f)!important;color:#14200f!important;border-color:#d0ee85!important;box-shadow:0 4px 18px #b9e66c24!important}.module-card{background:linear-gradient(145deg,#1b2820,#17211b)!important;border:1px solid #35483a!important;border-radius:18px!important;box-shadow:var(--shadow)!important;padding:20px!important}.module-wrap{padding-top:27px!important}.module-head h1{font-size:clamp(31px,5vw,43px)!important;letter-spacing:-.055em!important}.eyebrow{color:var(--accent)!important}.action{border-radius:11px!important;min-height:43px!important;background:#24332a!important;border-color:#405646!important}.action.primary{background:linear-gradient(135deg,#c7ef7a,#a8d75e)!important;border-color:#c5ed79!important;color:#18220f!important}#cloud-account>div{background:linear-gradient(145deg,#1c2921,#17211b)!important;border-color:#35483a!important;border-radius:18px!important;box-shadow:var(--shadow)!important}#panel-habits .wrap{padding-top:22px!important}#panel-habits .habit,#panel-habits .sum{border-radius:18px!important}#panel-fitness .module-card,#panel-budget .module-card,#panel-work .module-card{background:linear-gradient(145deg,#1b2820,#17211b)!important;border-color:#35483a!important;border-radius:18px!important}#panel-work input[type=text],#panel-work input[type=date],#panel-work input[type=number],#panel-work select{font-size:16px!important;min-height:46px!important;border-radius:11px!important}.todo-wrap{max-width:850px}.todo-hero{display:flex;align-items:center;justify-content:space-between;padding:22px 24px!important}.todo-hero>div:first-child{display:grid;gap:4px}.todo-kicker{font-size:10px;letter-spacing:.14em;color:var(--accent);font-weight:800}.todo-hero strong{font-size:42px;letter-spacing:-.05em;line-height:1}.todo-hero span:last-child{color:var(--muted2);font-size:13px}.todo-ring{width:76px;height:76px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--accent) calc(var(--progress)*1%),#34473a 0);position:relative}.todo-ring:before{content:"";position:absolute;inset:7px;border-radius:50%;background:#1b2920}.todo-ring span{position:relative;font-size:13px;font-weight:800;color:#e8f4e8}.todo-add{display:grid;gap:13px}.todo-add>input{width:100%;box-sizing:border-box;background:#101713;border:1px solid #3b5040;border-radius:12px;padding:14px;color:#edf3ed;font:inherit;font-size:16px;min-height:50px}.todo-fields{display:grid;grid-template-columns:1fr 1fr 1fr auto;align-items:end;gap:10px}.todo-fields label{display:grid;gap:6px;color:var(--muted2);font-size:12px}.todo-fields input,.todo-fields select{box-sizing:border-box;width:100%;min-height:43px;background:#101713;border:1px solid #3b5040;border-radius:10px;padding:9px;color:#edf3ed;font:inherit}.todo-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:20px 2px 12px}.todo-filters{display:flex;gap:6px;overflow-x:auto;padding:2px}.todo-filter{border:1px solid #35483a;background:#19231c;color:#aab8ad;padding:9px 13px;border-radius:999px;white-space:nowrap;font-size:12px;font-weight:600;cursor:pointer}.todo-filter.active{background:#c1e879;color:#18220f;border-color:#c1e879}.todo-clear{border:0;background:transparent;color:#9eb0a3;font-size:12px;white-space:nowrap;cursor:pointer}.todo-list{display:grid;gap:9px}.todo-item{display:flex;align-items:center;gap:12px;padding:15px 16px;background:linear-gradient(145deg,#1b2820,#17211b);border:1px solid #35483a;border-radius:15px;box-shadow:0 6px 18px #0002}.todo-item.priority-high{border-left:3px solid #e6b56c}.todo-item.priority-low{border-left:3px solid #6f9dbe}.todo-check{width:25px;height:25px;flex:0 0 25px;border:1.5px solid #5b765f;border-radius:8px;background:#142018;color:#bce77b;font-size:15px;font-weight:800;cursor:pointer}.todo-copy{flex:1;min-width:0}.todo-copy strong{display:block;overflow-wrap:anywhere;font-size:14px}.todo-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;font-size:11px;color:#9eafa3}.todo-meta .overdue{color:#ef9c88;font-weight:700}.todo-delete{border:0;background:transparent;color:#829488;font-size:22px;cursor:pointer;padding:4px 8px}.todo-item.is-done{opacity:.55}.todo-item.is-done .todo-copy strong{text-decoration:line-through}.todo-empty{padding:40px 20px;text-align:center;border:1px dashed #3c5041;border-radius:17px;color:#a9b8ad}.todo-empty span{display:block;font-size:25px;color:var(--accent);margin-bottom:9px}.todo-empty strong{color:#e5efe5}.todo-empty p{margin:7px 0 0;font-size:13px}@media(max-width:700px){.appnav{padding:8px 7px!important;gap:5px!important}.app-tab{padding:9px 3px!important;font-size:9px!important;letter-spacing:.02em!important;flex:1}.module-wrap{padding:19px 11px 40px!important}.module-card{padding:15px!important}.todo-fields{grid-template-columns:1fr 1fr}.todo-fields .action{grid-column:1/-1}.todo-toolbar{align-items:flex-start;flex-direction:column}.todo-filters{width:100%}.todo-clear{align-self:flex-end}.todo-hero{padding:19px!important}.todo-ring{width:68px;height:68px}.todo-item{padding:13px 11px;gap:9px}}@media(max-width:380px){.app-tab{font-size:8px!important}.todo-fields{grid-template-columns:1fr}.todo-fields .action{grid-column:auto}}
+</style>
+
 </body></html>
