@@ -687,7 +687,9 @@ button{ -webkit-tap-highlight-color:transparent }
 </style>
 
 </head><body>
-<title>Karta nawyków</title>
+<title>habitAppe</title>
+<meta name="application-name" content="habitAppe">
+<meta name="apple-mobile-web-app-title" content="habitAppe">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -924,7 +926,7 @@ details.tbl .tw { overflow-x: auto; }
 <section id="panel-habits" class="module-panel active">
 <div class="wrap" id="app">
   <header class="top">
-    <h1><input type="text" id="title" class="title" maxlength="40" value="Karta nawyków" aria-label="Nazwa karty" spellcheck="false" autocomplete="off"></h1>
+    <h1><input type="text" id="title" class="title" maxlength="40" value="habitAppe" aria-label="Nazwa karty" spellcheck="false" autocomplete="off"></h1>
     <div class="top-actions">
       <button id="app-refresh" type="button" class="app-refresh" aria-label="Odśwież aplikację" title="Odśwież aplikację">↻ <span>Odśwież</span></button>
       <div class="sync" id="sync" role="status"></div>
@@ -1186,7 +1188,7 @@ function isDateStr(s) { return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.te
 function newId() { return 'h' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36); }
 
 /* ---------- state ---------- */
-var DEFAULT_TITLE = 'Karta nawyków';
+var DEFAULT_TITLE = 'habitAppe';
 var S = { habits: [], checks: {}, rev: 0, demo: false, title: DEFAULT_TITLE, sleep: {} };
 var V = { view: 'tydzien', cursor: today(), editing: null, confirmDel: null, adding: false, sync: 'init', focus: null, sleepDay: ds(today()) };
 
