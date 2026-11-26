@@ -1097,7 +1097,7 @@ details.tbl .tw { overflow-x: auto; }
 <section id="panel-work" class="module-panel">
   <div class="module-wrap">
     <header class="module-head">
-      <div><p class="eyebrow">WORK LOG</p><h1>Ewidencja pracy</h1><p class="muted">Ewidencja czasu pracy oraz dodatki do podstawowej pensji etatowej.</p></div>
+      <div><h1>Ewidencja pracy</h1></div>
     </header>
 
     <div class="work-summary-grid">
@@ -1832,7 +1832,7 @@ window.addEventListener('hashchange', function () {
 </script>
 
 
-<section id="panel-todo" class="module-panel"><div class="module-wrap todo-wrap"><header class="module-head"><div><p class="eyebrow">CLEAR YOUR MIND</p><h1>To-do</h1><p class="muted">Zamień myśli w konkretne kroki. Jedna lista, spokojna głowa.</p></div></header><article class="todo-hero module-card"><div><span class="todo-kicker">DZISIAJ</span><strong id="todo-today-count">0</strong><span>zadań do zrobienia</span></div><div class="todo-ring" id="todo-ring"><span id="todo-progress">0%</span></div></article><form id="todo-form" class="todo-add module-card"><input id="todo-title" type="text" maxlength="140" placeholder="Co chcesz zrobić?" required aria-label="Treść zadania"><div class="todo-fields"><label>Termin<input id="todo-date" type="date"></label><label>Priorytet<select id="todo-priority"><option value="normal">Normalny</option><option value="high">Ważny</option><option value="low">Kiedyś</option></select></label><label>Obszar<select id="todo-category"><option>Osobiste</option><option>Praca</option><option>Fitness</option><option>Finanse</option><option>Dom</option><option>Inne</option></select></label><button class="action primary" type="submit">＋ Dodaj zadanie</button></div></form><div class="todo-toolbar"><div class="todo-filters"><button type="button" class="todo-filter active" data-filter="all">Wszystkie</button><button type="button" class="todo-filter" data-filter="today">Dzisiaj</button><button type="button" class="todo-filter" data-filter="open">Do zrobienia</button><button type="button" class="todo-filter" data-filter="done">Ukończone</button></div><button id="todo-clear-done" type="button" class="todo-clear">Usuń ukończone</button></div><div id="todo-list" class="todo-list"></div><div id="todo-empty" class="todo-empty" hidden><span>✦</span><strong>Tu jest czysto.</strong><p>Dodaj zadanie albo zmień filtr.</p></div></div></section>
+<section id="panel-todo" class="module-panel"><div class="module-wrap todo-wrap"><header class="module-head"><div><h1>Zadania</h1></div></header><article class="todo-hero module-card"><div><span class="todo-kicker">DZISIAJ</span><strong id="todo-today-count">0</strong><span>zadań do zrobienia</span></div><div class="todo-ring" id="todo-ring"><span id="todo-progress">0%</span></div></article><form id="todo-form" class="todo-add module-card"><input id="todo-title" type="text" maxlength="140" placeholder="Co chcesz zrobić?" required aria-label="Treść zadania"><div class="todo-fields"><label>Termin<input id="todo-date" type="date"></label><label>Priorytet<select id="todo-priority"><option value="normal">Normalny</option><option value="high">Ważny</option><option value="low">Kiedyś</option></select></label><label>Obszar<select id="todo-category"><option>Osobiste</option><option>Praca</option><option>Fitness</option><option>Finanse</option><option>Dom</option><option>Inne</option></select></label><button class="action primary" type="submit">＋ Dodaj zadanie</button></div></form><div class="todo-toolbar"><div class="todo-filters"><button type="button" class="todo-filter active" data-filter="all">Wszystkie</button><button type="button" class="todo-filter" data-filter="today">Dzisiaj</button><button type="button" class="todo-filter" data-filter="open">Do zrobienia</button><button type="button" class="todo-filter" data-filter="done">Ukończone</button></div><button id="todo-clear-done" type="button" class="todo-clear">Usuń ukończone</button></div><div id="todo-list" class="todo-list"></div><div id="todo-empty" class="todo-empty" hidden><span>✦</span><strong>Tu jest czysto.</strong><p>Dodaj zadanie albo zmień filtr.</p></div></div></section>
 <script>
 (function(){
   'use strict';
@@ -2612,8 +2612,9 @@ window.addEventListener('hashchange', function () {
           updated_at: new Date().toISOString()
         }, { onConflict: 'user_id' });
         if (mergeError) throw mergeError;
-        status('Dane zsynchronizowane. Odświeżam aplikację…', '#4bc59b');
-        setTimeout(() => location.reload(), 500);
+        status('Dane zsynchronizowane · zapisano połączoną wersję.', '#4bc59b');
+        window.dispatchEvent(new Event('lifetracker:datachange'));
+        // Nie przeładowujemy strony automatycznie: zapobiega to pętli na mobile.
       } else {
         status('Połączono z chmurą · dane są aktualne.', '#4bc59b');
       }
@@ -2977,7 +2978,7 @@ hr{border-color:#3c493b!important;opacity:.9}
 @media(max-width:600px){.top-actions{width:100%;justify-content:space-between}.app-refresh{min-width:44px;justify-content:center}.app-refresh span{display:inline}}
 </style>
 <script id="mobile-refresh-handler">
-(()=>{const button=document.getElementById('app-refresh');if(!button)return;button.addEventListener('click',async()=>{button.disabled=true;button.querySelector('span').textContent='Odświeżanie…';try{if('serviceWorker' in navigator){const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(r=>r.unregister()));}const u=new URL(location.href);u.searchParams.set('refresh',Date.now());location.replace(u.toString());}catch(e){location.replace(location.pathname+'?refresh='+Date.now()+location.hash);}});})();
+(()=>{const button=document.getElementById('app-refresh');if(!button)return;button.addEventListener('click',()=>{button.disabled=true;const label=button.querySelector('span');if(label)label.textContent='Odświeżanie…';window.location.reload();});})();
 </script>
 
 <style id="lifetracker-requested-polish-2026-11">
@@ -3160,3 +3161,42 @@ input,select,textarea{accent-color:var(--lt-accent)}
 </style>
 
 </body></html>
+
+<style id="mobile-layout-final-fixes-2026-11-26">
+/* Mobile form layout: prevent fields from overflowing or overlapping */
+*,*::before,*::after{box-sizing:border-box}
+input,select,textarea,button{max-width:100%}
+.module-panel,.module-wrap,.module-card,form,fieldset,.grid,.form-grid,.row,.work-layout,.work-form,.work-settings form{min-width:0}
+label{min-width:0}
+input,select,textarea{width:100%;min-width:0}
+@media(max-width:700px){
+ .module-wrap{width:100%;max-width:100%;overflow-x:clip}
+ .module-card{width:100%;max-width:100%}
+ .module-head{display:block;margin-bottom:16px}
+ .module-head h1{margin:0!important;line-height:1.12!important}
+ .module-panel form{display:flex;flex-direction:column;gap:12px;align-items:stretch}
+ .module-panel form>*{width:100%;max-width:100%;min-width:0}
+ .module-panel form label{display:flex;flex-direction:column;gap:6px;width:100%;min-width:0}
+ .module-panel input,.module-panel select,.module-panel textarea{width:100%!important;max-width:100%!important;min-width:0!important;font-size:16px!important;min-height:44px}
+ .module-panel button{min-height:42px;white-space:normal}
+ #panel-work .work-layout,#panel-work .work-form-grid,#panel-work .work-entry-form,.work-settings form{grid-template-columns:1fr!important}
+ #panel-work .work-entry,#panel-work .work-breakdown-item{min-width:0;max-width:100%;flex-wrap:wrap}
+ #panel-work .work-entry-side{white-space:normal;text-align:left;max-width:100%}
+ #panel-work .work-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ #panel-work .work-calendar{width:100%;max-width:100%;overflow:hidden}
+ #panel-work .work-day{min-width:0!important}
+ #panel-todo .todo-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #panel-todo .todo-fields label{min-width:0}
+ #panel-todo .todo-fields .action{grid-column:1/-1}
+ #panel-todo .todo-toolbar{width:100%;min-width:0}
+ #panel-todo .todo-filters{max-width:100%;overflow-x:auto;scrollbar-width:none}
+ #panel-todo .todo-item{min-width:0}
+ #panel-todo .todo-copy{min-width:0;overflow-wrap:anywhere}
+}
+@media(max-width:390px){
+ #panel-todo .todo-fields{grid-template-columns:1fr}
+ #panel-todo .todo-fields .action{grid-column:auto}
+ #panel-work .work-summary-grid{grid-template-columns:1fr 1fr!important}
+ .module-wrap{padding-left:10px!important;padding-right:10px!important}
+}
+</style>
